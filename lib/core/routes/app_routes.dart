@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../modules/ressources_pedagogiques/views/ressources_dashboard_view.dart';
+
 class AppRoutes {
   static const String home = '/';
 
@@ -7,11 +9,7 @@ class AppRoutes {
     switch (settings.name) {
       case home:
         return MaterialPageRoute(
-          builder: (_) => const Scaffold(
-            body: Center(
-              child: Text('Elite Prepa'),
-            ),
-          ),
+          builder: (_) => const RessourcesDashboardView(),
         );
 
       default:
