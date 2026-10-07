@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-
+import 'add_fiche_view.dart';
 class AddEditFicheView extends StatefulWidget {
   final String? id;
   final String? titre;
@@ -65,11 +65,20 @@ class _AddEditFicheViewState extends State<AddEditFicheView> {
     super.dispose();
   }
 
-  Future<void> _pickPDFFile() async {
+Future<void> _pickPDFFile() async {
+  final result = await Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (_) => const AddFicheView(),
+    ),
+  );
+
+  if (result != null && mounted) {
     setState(() {
-      _selectedFileName = 'document_cours.pdf';
+      _selectedFileName = result['name'] as String?;
     });
   }
+}
 
   void _removeSelectedFile() {
     setState(() {

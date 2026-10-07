@@ -9,7 +9,6 @@ import '../../modules/ressources_pedagogiques/views/delete_matiere_view.dart';
 import '../../modules/ressources_pedagogiques/views/add_edit_fiche_view.dart';
 import '../../modules/ressources_pedagogiques/views/fiches_cours_view.dart';
 import '../../modules/ressources_pedagogiques/views/delete_fiche_view.dart';
-import '../../modules/ressources_pedagogiques/views/add_fiche_view.dart';
 
 class AppRoutes {
   static const String home = '/';
@@ -63,7 +62,7 @@ class AppRoutes {
           ),
         );
 
-      case addEditFiche:
+      case addFiche:
         return MaterialPageRoute(
           builder: (_) => const AddEditFicheView(),
         );
@@ -79,10 +78,10 @@ class AppRoutes {
           builder: (_) => DeleteFicheView(fiche: fiche),
         );
 
-      case addFiche:
+      /*case addFiche:
         return MaterialPageRoute(
           builder: (_) => const AddFicheView(),
-        );
+        );*/
 
       default:
         return MaterialPageRoute(
