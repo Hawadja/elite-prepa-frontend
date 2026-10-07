@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-
 import '../models/matiere.dart';
 import '../viewmodels/matiere_viewmodel.dart';
+import '../../../core/routes/app_routes.dart';
 
 class MatieresView extends StatefulWidget {
   const MatieresView({super.key});
@@ -95,8 +95,11 @@ class _MatieresViewState extends State<MatieresView> {
           IconButton(
             tooltip: 'Ajouter une matière',
             icon: const Icon(Icons.add),
-            onPressed: () {
-              // Action ajouter une matière
+            onPressed: () async {
+              final result = await Navigator.pushNamed(context, AppRoutes.addEditMatiere);
+              if (result == true) {
+                _loadMatieres(); // Recharge la liste si une matière a été ajoutée
+              }
             },
           ),
           const SizedBox(width: 6),
