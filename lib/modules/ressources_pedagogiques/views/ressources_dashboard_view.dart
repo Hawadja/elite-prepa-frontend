@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/routes/app_routes.dart';
 
 class RessourcesDashboardView extends StatefulWidget {
   const RessourcesDashboardView({super.key});
@@ -192,8 +193,10 @@ appBar: AppBar(
                 height: 44,
                 child: ElevatedButton(
                   onPressed: () {
-                    // La navigation vers la liste sera ajoutée
-                    // lorsque l'écran correspondant sera créé.
+                    Navigator.pushNamed(
+                      context,
+                      AppRoutes.matieres,
+                    );
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor:
