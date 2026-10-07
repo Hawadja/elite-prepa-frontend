@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-
 import '../models/matiere.dart';
+import '../../../../core/theme/app_colors.dart';
 
 class AddEditMatiereView extends StatefulWidget {
   final Matiere? matiere;
@@ -17,7 +17,6 @@ class _AddEditMatiereViewState extends State<AddEditMatiereView> {
   static const Color darkBg = Color(0xFF091629);
   static const Color darkCardBg = Color(0xFF102542);
   static const Color lightBg = Color(0xFFF6F8FB);
-  static const Color accentBlue = Color(0xFF1A56A6);
 
   final _formKey = GlobalKey<FormState>();
 
@@ -102,7 +101,6 @@ class _AddEditMatiereViewState extends State<AddEditMatiereView> {
     final backgroundColor = isDark ? darkBg : lightBg;
     final cardFillColor = isDark ? darkCardBg : Colors.white;
     final textColor = isDark ? Colors.white : Colors.black87;
-    final subTextColor = isDark ? Colors.white70 : Colors.black54;
 
     return Scaffold(
       backgroundColor: backgroundColor,
@@ -111,37 +109,37 @@ class _AddEditMatiereViewState extends State<AddEditMatiereView> {
       // APP BAR
       // ============================================================
       appBar: AppBar(
-        backgroundColor: backgroundColor,
-        foregroundColor: textColor,
+        backgroundColor: AppColors.primaryBlue,
+        foregroundColor: Colors.white,
         elevation: 0,
-        scrolledUnderElevation: 0,
+        surfaceTintColor: Colors.transparent,
+        shadowColor: Colors.transparent,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, size: 20),
-          onPressed: () => Navigator.pop(context),
+          tooltip: 'Retour',
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.of(context).pop(),
         ),
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               _isEditing ? 'Modifier la matière' : 'Ajouter une matière',
-              style: TextStyle(
+              style: const TextStyle(
+                color: Colors.white,
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
-                color: textColor,
               ),
             ),
-            Text(
+            const Text(
               'Matières • Elite-Prepa',
               style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-                color: subTextColor,
+                color: Colors.white70,
+                fontSize: 12,
               ),
             ),
           ],
         ),
       ),
-
       // ============================================================
       // FORMULAIRE
       // ============================================================
@@ -247,47 +245,40 @@ class _AddEditMatiereViewState extends State<AddEditMatiereView> {
       // ============================================================
       // NAVIGATION BOTTOM
       // ============================================================
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          border: Border(
-            top: BorderSide(
-              color: isDark ? Colors.white10 : Colors.black12,
-              width: 0.5,
-            ),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _currentIndex,
+        onDestinationSelected: (index) {
+          setState(() {
+            _currentIndex = index;
+          });
+        },
+        backgroundColor: isDark
+            ? const Color(0xFF081B32)
+            : Colors.white,
+        indicatorColor: AppColors.accentGold.withValues(alpha: 0.18),
+        height: 68,
+        destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.home_outlined),
+            selectedIcon: Icon(Icons.home),
+            label: 'Accueil',
           ),
-        ),
-        child: BottomNavigationBar(
-          currentIndex: _currentIndex,
-          onTap: (index) {
-            setState(() {
-              _currentIndex = index;
-            });
-          },
-          backgroundColor: backgroundColor,
-          type: BottomNavigationBarType.fixed,
-          selectedItemColor: accentBlue,
-          unselectedItemColor: isDark ? Colors.white54 : Colors.grey[600],
-          selectedFontSize: 12,
-          unselectedFontSize: 12,
-          items: const [
-            BottomNavigationBarItem(
-              icon: Icon(Icons.home_outlined),
-              label: 'Accueil',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.menu_book),
-              label: 'Révisions',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.square_outlined),
-              label: 'Concours',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.circle_outlined),
-              label: 'Profil',
-            ),
-          ],
-        ),
+          NavigationDestination(
+            icon: Icon(Icons.menu_book_outlined),
+            selectedIcon: Icon(Icons.menu_book),
+            label: 'Révisions',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.school_outlined),
+            selectedIcon: Icon(Icons.school),
+            label: 'Concours',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.person_outline),
+            selectedIcon: Icon(Icons.person),
+            label: 'Profil',
+          ),
+        ],
       ),
     );
   }
