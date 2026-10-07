@@ -18,9 +18,7 @@ class _MatieresViewState extends State<MatieresView> {
   int _currentIndex = 1;
 
   final MatiereViewModel _viewModel = MatiereViewModel();
-
-  final TextEditingController _searchController =
-      TextEditingController();
+  final TextEditingController _searchController = TextEditingController();
 
   List<Matiere> _matieres = [];
   bool _isLoading = true;
@@ -34,9 +32,7 @@ class _MatieresViewState extends State<MatieresView> {
   Future<void> _loadMatieres() async {
     final matieres = await _viewModel.loadMatieres();
 
-    if (!mounted) {
-      return;
-    }
+    if (!mounted) return;
 
     setState(() {
       _matieres = matieres;
@@ -65,228 +61,193 @@ class _MatieresViewState extends State<MatieresView> {
   }
 
   @override
-Widget build(BuildContext context) {
-  final theme = Theme.of(context);
-  final isDark = theme.brightness == Brightness.dark;
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
-  return Scaffold(
-    backgroundColor: isDark
-        ? theme.colorScheme.surface
-        : lightBackground,
+    return Scaffold(
+      backgroundColor: isDark ? theme.colorScheme.surface : lightBackground,
 
-    // ============================================================
-    // APP BAR
-    // ============================================================
-    appBar: AppBar(
-      backgroundColor: primaryColor,
-      foregroundColor: Colors.white,
-      elevation: 0,
-      surfaceTintColor: Colors.transparent,
-      shadowColor: Colors.transparent,
-
-      leading: IconButton(
-        tooltip: 'Retour',
-        icon: const Icon(Icons.arrow_back),
-        onPressed: () {
-          Navigator.pop(context);
-        },
-      ),
-
-      title: const Text(
-        'Matières',
-        style: TextStyle(
-          fontSize: 20,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-
-      actions: [
-        IconButton(
-          tooltip: 'Ajouter une matière',
-          icon: const Icon(Icons.add),
+      // ============================================================
+      // APP BAR
+      // ============================================================
+      appBar: AppBar(
+        backgroundColor: primaryColor,
+        foregroundColor: Colors.white,
+        elevation: 0,
+        surfaceTintColor: Colors.transparent,
+        shadowColor: Colors.transparent,
+        leading: IconButton(
+          tooltip: 'Retour',
+          icon: const Icon(Icons.arrow_back),
           onPressed: () {
-            // L'écran Ajouter une matière sera branché ensuite.
+            Navigator.pop(context);
           },
         ),
-        const SizedBox(width: 6),
-      ],
-    ),
+        title: const Text(
+          'Matières',
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        actions: [
+          IconButton(
+            tooltip: 'Ajouter une matière',
+            icon: const Icon(Icons.add),
+            onPressed: () {
+              // Action ajouter une matière
+            },
+          ),
+          const SizedBox(width: 6),
+        ],
+      ),
 
-    // ============================================================
-    // CONTENU
-    // ============================================================
-    body: SafeArea(
-      bottom: false,
-      child: Column(
-        children: [
-          // ========================================================
-          // RECHERCHE
-          // ========================================================
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-              16,
-              16,
-              16,
-              10,
-            ),
-            child: TextField(
-              controller: _searchController,
-              onChanged: (_) {
-                setState(() {});
-              },
-              decoration: InputDecoration(
-                hintText: 'Rechercher une matière...',
-                prefixIcon: const Icon(
-                  Icons.search,
-                  color: accentColor,
-                ),
-                suffixIcon: _searchController.text.isNotEmpty
-                    ? IconButton(
-                        onPressed: () {
-                          _searchController.clear();
-                          setState(() {});
-                        },
-                        icon: const Icon(Icons.clear),
-                      )
-                    : null,
-                filled: true,
-                fillColor: isDark
-                    ? const Color(0xFF102944)
-                    : Colors.white,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide.none,
-                ),
-                contentPadding: const EdgeInsets.symmetric(
-                  vertical: 13,
-                  horizontal: 12,
+      // ============================================================
+      // CONTENU
+      // ============================================================
+      body: SafeArea(
+        bottom: false,
+        child: Column(
+          children: [
+            // ========================================================
+            // RECHERCHE
+            // ========================================================
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 10),
+              child: TextField(
+                controller: _searchController,
+                onChanged: (_) => setState(() {}),
+                decoration: InputDecoration(
+                  hintText: 'Rechercher une matière...',
+                  prefixIcon: const Icon(
+                    Icons.search,
+                    color: accentColor,
+                  ),
+                  suffixIcon: _searchController.text.isNotEmpty
+                      ? IconButton(
+                          onPressed: () {
+                            _searchController.clear();
+                            setState(() {});
+                          },
+                          icon: const Icon(Icons.clear),
+                        )
+                      : null,
+                  filled: true,
+                  fillColor:
+                      isDark ? const Color(0xFF102944) : Colors.white,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide.none,
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    vertical: 13,
+                    horizontal: 12,
+                  ),
                 ),
               ),
             ),
-          ),
 
-          // ========================================================
-          // LISTE DES MATIÈRES
-          // ========================================================
-          Expanded(
-            child: _isLoading
-                ? const Center(
-                    child: CircularProgressIndicator(
-                      color: accentColor,
-                    ),
-                  )
-                : _filteredMatieres.isEmpty
-                    ? _EmptyState(
-                        isDark: isDark,
-                      )
-                    : ListView.separated(
-                        padding: const EdgeInsets.fromLTRB(
-                          16,
-                          6,
-                          16,
-                          16,
-                        ),
-                        itemCount: _filteredMatieres.length,
-                        separatorBuilder: (_, _) =>
-                            const SizedBox(height: 10),
-                        itemBuilder: (context, index) {
-                          final matiere =
-                              _filteredMatieres[index];
-
-                          return _MatiereCard(
-                            matiere: matiere,
-                            isDark: isDark,
-                          );
-                        },
+            // ========================================================
+            // LISTE DES MATIÈRES
+            // ========================================================
+            Expanded(
+              child: _isLoading
+                  ? const Center(
+                      child: CircularProgressIndicator(
+                        color: accentColor,
                       ),
-          ),
-
-          // ============================================================
-          // MATIÈRES ACTIVES
-          // ============================================================
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-              16,
-              8,
-              16,
-              12,
+                    )
+                  : _filteredMatieres.isEmpty
+                      ? _EmptyState(isDark: isDark)
+                      : ListView.separated(
+                          padding: const EdgeInsets.fromLTRB(16, 6, 16, 16),
+                          itemCount: _filteredMatieres.length,
+                          separatorBuilder: (_, _) =>
+                              const SizedBox(height: 10),
+                          itemBuilder: (context, index) {
+                            final matiere = _filteredMatieres[index];
+                            return _MatiereCard(
+                              matiere: matiere,
+                              isDark: isDark,
+                            );
+                          },
+                        ),
             ),
-            child: SizedBox(
-              width: double.infinity,
-              height: 44,
-              child: ElevatedButton(
-                onPressed: () {
-                  // Action à brancher lorsque le backend sera disponible.
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: primaryColor,
-                  foregroundColor: Colors.white,
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(9),
+
+            // ============================================================
+            // MATIÈRES ACTIVES
+            // ============================================================
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+              child: SizedBox(
+                width: double.infinity,
+                height: 44,
+                child: ElevatedButton(
+                  onPressed: () {
+                    // Action backend
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: primaryColor,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(9),
+                    ),
                   ),
-                ),
-                child: const Text(
-                  '8 matières actives',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
+                  child: Text(
+                    '${_matieres.length} matières actives',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               ),
             ),
+          ],
+        ),
+      ),
+
+      // ============================================================
+      // NAVIGATION INFÉRIEURE
+      // ============================================================
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _currentIndex,
+        onDestinationSelected: (index) {
+          setState(() {
+            _currentIndex = index;
+          });
+        },
+        backgroundColor:
+            isDark ? const Color(0xFF081B32) : Colors.white,
+        indicatorColor: accentColor.withValues(alpha: 0.18),
+        height: 68,
+        destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.home_outlined),
+            selectedIcon: Icon(Icons.home),
+            label: 'Accueil',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.menu_book_outlined),
+            selectedIcon: Icon(Icons.menu_book),
+            label: 'Révisions',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.school_outlined),
+            selectedIcon: Icon(Icons.school),
+            label: 'Concours',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.person_outline),
+            selectedIcon: Icon(Icons.person),
+            label: 'Profil',
           ),
         ],
       ),
-    ),
-
-    // ============================================================
-    // NAVIGATION INFÉRIEURE
-    // ============================================================
-    bottomNavigationBar: NavigationBar(
-      selectedIndex: _currentIndex,
-
-      onDestinationSelected: (index) {
-        setState(() {
-          _currentIndex = index;
-        });
-      },
-
-      backgroundColor: isDark
-          ? const Color(0xFF081B32)
-          : Colors.white,
-
-      indicatorColor: accentColor.withValues(
-        alpha: 0.18,
-      ),
-
-      height: 68,
-
-      destinations: const [
-        NavigationDestination(
-          icon: Icon(Icons.home_outlined),
-          selectedIcon: Icon(Icons.home),
-          label: 'Accueil',
-        ),
-        NavigationDestination(
-          icon: Icon(Icons.menu_book_outlined),
-          selectedIcon: Icon(Icons.menu_book),
-          label: 'Révisions',
-        ),
-        NavigationDestination(
-          icon: Icon(Icons.school_outlined),
-          selectedIcon: Icon(Icons.school),
-          label: 'Concours',
-        ),
-        NavigationDestination(
-          icon: Icon(Icons.person_outline),
-          selectedIcon: Icon(Icons.person),
-          label: 'Profil',
-        ),
-      ],
-    ),
-  );
-}
+    );
+  }
 }
 
 class _MatiereCard extends StatelessWidget {
@@ -309,7 +270,14 @@ class _MatiereCard extends StatelessWidget {
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
         onTap: () {
-          // La page détail sera ajoutée ensuite.
+          Navigator.pushNamed(
+            context,
+            '/matiere-detail',
+            arguments: {
+              'matiereId': matiere.id,
+              'matiereNom': matiere.nom,
+            },
+          );
         },
         child: Padding(
           padding: const EdgeInsets.all(14),
@@ -319,8 +287,7 @@ class _MatiereCard extends StatelessWidget {
                 width: 46,
                 height: 46,
                 decoration: BoxDecoration(
-                  color: const Color(0xFF1F3F6E)
-                      .withValues(alpha: 0.10),
+                  color: const Color(0xFF1F3F6E).withValues(alpha: 0.10),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 alignment: Alignment.center,
@@ -333,17 +300,14 @@ class _MatiereCard extends StatelessWidget {
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
-                  crossAxisAlignment:
-                      CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       matiere.nom,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        color: isDark
-                            ? Colors.white
-                            : const Color(0xFF1F3F6E),
+                        color: isDark ? Colors.white : const Color(0xFF1F3F6E),
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                       ),
@@ -363,46 +327,43 @@ class _MatiereCard extends StatelessWidget {
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        color: isDark
-                            ? Colors.white70
-                            : Colors.black54,
+                        color: isDark ? Colors.white70 : Colors.black54,
                         fontSize: 13,
                       ),
                     ),
                   ],
                 ),
               ),
-                    const SizedBox(width: 8),
-
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          tooltip: 'Modifier',
-                          visualDensity: VisualDensity.compact,
-                          icon: const Icon(
-                            Icons.edit_outlined,
-                            size: 20,
-                          ),
-                          color: const Color(0xFF1F3F6E),
-                          onPressed: () {
-                            // Écran de modification à brancher ensuite.
-                          },
-                        ),
-                        IconButton(
-                          tooltip: 'Supprimer',
-                          visualDensity: VisualDensity.compact,
-                          icon: const Icon(
-                            Icons.delete_outline,
-                            size: 20,
-                          ),
-                          color: Colors.red,
-                          onPressed: () {
-                            // Confirmation de suppression à brancher ensuite.
-                          },
-                        ),
-                      ],
+              const SizedBox(width: 8),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    tooltip: 'Modifier',
+                    visualDensity: VisualDensity.compact,
+                    icon: const Icon(
+                      Icons.edit_outlined,
+                      size: 20,
                     ),
+                    color: const Color(0xFF1F3F6E),
+                    onPressed: () {
+                      // Action modifier
+                    },
+                  ),
+                  IconButton(
+                    tooltip: 'Supprimer',
+                    visualDensity: VisualDensity.compact,
+                    icon: const Icon(
+                      Icons.delete_outline,
+                      size: 20,
+                    ),
+                    color: Colors.red,
+                    onPressed: () {
+                      // Action supprimer
+                    },
+                  ),
+                ],
+              ),
             ],
           ),
         ),
@@ -429,17 +390,13 @@ class _EmptyState extends StatelessWidget {
             Icon(
               Icons.menu_book_outlined,
               size: 48,
-              color: isDark
-                  ? Colors.white54
-                  : const Color(0xFF1F3F6E),
+              color: isDark ? Colors.white54 : const Color(0xFF1F3F6E),
             ),
             const SizedBox(height: 12),
             Text(
               'Aucune matière trouvée',
               style: TextStyle(
-                color: isDark
-                    ? Colors.white
-                    : const Color(0xFF1F3F6E),
+                color: isDark ? Colors.white : const Color(0xFF1F3F6E),
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
               ),
@@ -449,9 +406,7 @@ class _EmptyState extends StatelessWidget {
               'Essayez une autre recherche.',
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: isDark
-                    ? Colors.white70
-                    : Colors.black54,
+                color: isDark ? Colors.white70 : Colors.black54,
                 fontSize: 13,
               ),
             ),
