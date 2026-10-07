@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+
+import '../../../core/routes/app_routes.dart';
 import '../models/matiere.dart';
 import '../viewmodels/matiere_viewmodel.dart';
-import '../../../core/routes/app_routes.dart';
 
 class MatieresView extends StatefulWidget {
   const MatieresView({super.key});
@@ -66,7 +67,8 @@ class _MatieresViewState extends State<MatieresView> {
     final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: isDark ? theme.colorScheme.surface : lightBackground,
+      backgroundColor:
+          isDark ? theme.colorScheme.surface : lightBackground,
 
       // ============================================================
       // APP BAR
@@ -96,9 +98,13 @@ class _MatieresViewState extends State<MatieresView> {
             tooltip: 'Ajouter une matière',
             icon: const Icon(Icons.add),
             onPressed: () async {
-              final result = await Navigator.pushNamed(context, AppRoutes.addEditMatiere);
-              if (result == true) {
-                _loadMatieres(); // Recharge la liste si une matière a été ajoutée
+              final result = await Navigator.pushNamed(
+                context,
+                AppRoutes.addEditMatiere,
+              );
+
+              if (result == true && context.mounted) {
+                _loadMatieres();
               }
             },
           ),
@@ -113,14 +119,13 @@ class _MatieresViewState extends State<MatieresView> {
         bottom: false,
         child: Column(
           children: [
-            // ========================================================
-            // RECHERCHE
-            // ========================================================
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 10),
               child: TextField(
                 controller: _searchController,
-                onChanged: (_) => setState(() {}),
+                onChanged: (_) {
+                  setState(() {});
+                },
                 decoration: InputDecoration(
                   hintText: 'Rechercher une matière...',
                   prefixIcon: const Icon(
@@ -151,9 +156,6 @@ class _MatieresViewState extends State<MatieresView> {
               ),
             ),
 
-            // ========================================================
-            // LISTE DES MATIÈRES
-            // ========================================================
             Expanded(
               child: _isLoading
                   ? const Center(
@@ -164,32 +166,37 @@ class _MatieresViewState extends State<MatieresView> {
                   : _filteredMatieres.isEmpty
                       ? _EmptyState(isDark: isDark)
                       : ListView.separated(
-                          padding: const EdgeInsets.fromLTRB(16, 6, 16, 16),
+                          padding: const EdgeInsets.fromLTRB(
+                            16,
+                            6,
+                            16,
+                            16,
+                          ),
                           itemCount: _filteredMatieres.length,
                           separatorBuilder: (_, _) =>
                               const SizedBox(height: 10),
                           itemBuilder: (context, index) {
                             final matiere = _filteredMatieres[index];
+
                             return _MatiereCard(
                               matiere: matiere,
                               isDark: isDark,
+                              onChanged: _loadMatieres,
                             );
                           },
                         ),
             ),
 
-            // ============================================================
-            // MATIÈRES ACTIVES
-            // ============================================================
+            // ========================================================
+            // NOMBRE DE MATIÈRES
+            // ========================================================
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
               child: SizedBox(
                 width: double.infinity,
                 height: 44,
                 child: ElevatedButton(
-                  onPressed: () {
-                    // Action backend
-                  },
+                  onPressed: () {},
                   style: ElevatedButton.styleFrom(
                     backgroundColor: primaryColor,
                     foregroundColor: Colors.white,
@@ -213,7 +220,7 @@ class _MatieresViewState extends State<MatieresView> {
       ),
 
       // ============================================================
-      // NAVIGATION INFÉRIEURE
+      // NAVIGATION BOTTOM
       // ============================================================
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,
@@ -253,13 +260,19 @@ class _MatieresViewState extends State<MatieresView> {
   }
 }
 
+// ==================================================================
+// CARTE MATIÈRE
+// ==================================================================
+
 class _MatiereCard extends StatelessWidget {
   final Matiere matiere;
   final bool isDark;
+  final VoidCallback onChanged;
 
   const _MatiereCard({
     required this.matiere,
     required this.isDark,
+    required this.onChanged,
   });
 
   @override
@@ -275,17 +288,17 @@ class _MatiereCard extends StatelessWidget {
         onTap: () {
           Navigator.pushNamed(
             context,
-            '/matiere-detail',
-            arguments: {
-              'matiereId': matiere.id,
-              'matiereNom': matiere.nom,
-            },
+            AppRoutes.matiereDetail,
+            arguments: matiere,
           );
         },
         child: Padding(
           padding: const EdgeInsets.all(14),
           child: Row(
             children: [
+              // ========================================================
+              // ICÔNE
+              // ========================================================
               Container(
                 width: 46,
                 height: 46,
@@ -300,7 +313,12 @@ class _MatiereCard extends StatelessWidget {
                   size: 24,
                 ),
               ),
+
               const SizedBox(width: 12),
+
+              // ========================================================
+              // INFORMATIONS
+              // ========================================================
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -310,7 +328,9 @@ class _MatiereCard extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        color: isDark ? Colors.white : const Color(0xFF1F3F6E),
+                        color: isDark
+                            ? Colors.white
+                            : const Color(0xFF1F3F6E),
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                       ),
@@ -330,17 +350,26 @@ class _MatiereCard extends StatelessWidget {
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        color: isDark ? Colors.white70 : Colors.black54,
+                        color:
+                            isDark ? Colors.white70 : Colors.black54,
                         fontSize: 13,
                       ),
                     ),
                   ],
                 ),
               ),
+
               const SizedBox(width: 8),
+
+              // ========================================================
+              // ACTIONS
+              // ========================================================
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  // ----------------------------------------------------
+                  // MODIFIER
+                  // ----------------------------------------------------
                   IconButton(
                     tooltip: 'Modifier',
                     visualDensity: VisualDensity.compact,
@@ -349,10 +378,22 @@ class _MatiereCard extends StatelessWidget {
                       size: 20,
                     ),
                     color: const Color(0xFF1F3F6E),
-                    onPressed: () {
-                      // Action modifier
+                    onPressed: () async {
+                      final result = await Navigator.pushNamed(
+                        context,
+                        AppRoutes.addEditMatiere,
+                        arguments: matiere,
+                      );
+
+                      if (result == true && context.mounted) {
+                        onChanged();
+                      }
                     },
                   ),
+
+                  // ----------------------------------------------------
+                  // SUPPRIMER
+                  // ----------------------------------------------------
                   IconButton(
                     tooltip: 'Supprimer',
                     visualDensity: VisualDensity.compact,
@@ -361,8 +402,16 @@ class _MatiereCard extends StatelessWidget {
                       size: 20,
                     ),
                     color: Colors.red,
-                    onPressed: () {
-                      // Action supprimer
+                    onPressed: () async {
+                      final result = await Navigator.pushNamed(
+                        context,
+                        AppRoutes.deleteMatiere,
+                        arguments: matiere,
+                      );
+
+                      if (result == true && context.mounted) {
+                        onChanged();
+                      }
                     },
                   ),
                 ],
@@ -374,6 +423,10 @@ class _MatiereCard extends StatelessWidget {
     );
   }
 }
+
+// ==================================================================
+// ÉTAT VIDE
+// ==================================================================
 
 class _EmptyState extends StatelessWidget {
   final bool isDark;
@@ -393,13 +446,15 @@ class _EmptyState extends StatelessWidget {
             Icon(
               Icons.menu_book_outlined,
               size: 48,
-              color: isDark ? Colors.white54 : const Color(0xFF1F3F6E),
+              color:
+                  isDark ? Colors.white54 : const Color(0xFF1F3F6E),
             ),
             const SizedBox(height: 12),
             Text(
               'Aucune matière trouvée',
               style: TextStyle(
-                color: isDark ? Colors.white : const Color(0xFF1F3F6E),
+                color:
+                    isDark ? Colors.white : const Color(0xFF1F3F6E),
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
               ),

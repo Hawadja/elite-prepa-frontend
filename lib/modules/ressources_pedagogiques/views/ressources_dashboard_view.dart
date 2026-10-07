@@ -122,23 +122,32 @@ appBar: AppBar(
                 childAspectRatio: 2.25,
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
-                children: const [
-                  _StatCard(
+                children: [
+                  const _StatCard(
                     title: 'Matières',
                     value: '8',
                     icon: Icons.menu_book_outlined,
                   ),
+
                   _StatCard(
                     title: 'Fiches de cours',
                     value: '42',
                     icon: Icons.description_outlined,
+                    onTap: () {
+                      Navigator.pushNamed(
+                        context,
+                        AppRoutes.fichesCours,
+                      );
+                    },
                   ),
-                  _StatCard(
+
+                  const _StatCard(
                     title: 'Sujets',
                     value: '27',
                     icon: Icons.assignment_outlined,
                   ),
-                  _StatCard(
+
+                  const _StatCard(
                     title: 'Corrigés disponibles',
                     value: '19',
                     icon: Icons.check_circle_outline,
@@ -282,11 +291,13 @@ class _StatCard extends StatelessWidget {
   final String title;
   final String value;
   final IconData icon;
+  final VoidCallback? onTap;
 
   const _StatCard({
     required this.title,
     required this.value,
     required this.icon,
+    this.onTap,
   });
 
   @override
@@ -297,15 +308,18 @@ class _StatCard extends StatelessWidget {
     return Card(
       elevation: 1,
       margin: EdgeInsets.zero,
+      clipBehavior: Clip.antiAlias,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(10),
       ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: 12,
-          vertical: 9,
-        ),
-        child: Row(
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: 12,
+            vertical: 9,
+          ),
+          child: Row(
           children: [
             Icon(
               icon,
@@ -347,6 +361,7 @@ class _StatCard extends StatelessWidget {
           ],
         ),
       ),
+    )
     );
   }
 }
