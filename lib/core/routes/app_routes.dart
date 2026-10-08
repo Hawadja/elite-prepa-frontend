@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../utilisateurs/views/screens/login_screen.dart';
+import '../../utilisateurs/views/screens/otp_screen.dart';
 import '../../utilisateurs/views/screens/register_screen.dart';
 
 class AppRoutes {
@@ -22,12 +23,7 @@ class AppRoutes {
       case otp:
         final email = settings.arguments as String? ?? '';
         return MaterialPageRoute(
-          builder: (_) => Scaffold(
-            appBar: AppBar(title: const Text('Vérification OTP')),
-            body: Center(
-              child: Text('Écran OTP pour $email'),
-            ),
-          ),
+          builder: (_) => OtpScreen(email: email),
         );
 
       case login:
