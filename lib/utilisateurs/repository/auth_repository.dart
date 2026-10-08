@@ -62,4 +62,53 @@ class AuthRepository {
       throw ApiException(message: e.toString());
     }
   }
+
+  /// Vérification du code OTP envoyé par email
+  /// Fait un POST vers /auth/verify-otp et retourne le token JWT (String)
+  Future<String> verifyOtp(String email, String code) async {
+    try {
+      final response = await _dioClient.dio.post(
+        '/auth/verify-otp',
+        data: {
+          'email': email,
+          'code': code,
+        },
+      );
+
+      final data = response.data;
+      if (data is Map<String, dynamic>) {
+        final token = data['token'] ??
+            data['accessToken'] ??
+            (data['data'] is Map<String, dynamic>
+                ? data['data']['token'] ?? data['data']['accessToken']
+                : null);
+
+        if (token != null && token.toString().isNotEmpty) {
+          return token.toString();
+        }
+      }
+
+      throw const ApiException(
+        message: 'Token non trouvé dans la réponse du serveur.',
+      );
+    } on DioException catch (e) {
+      if (e.error is ApiException) {
+        throw e.error as ApiException;
+      }
+      final backendMessage = e.response?.data is Map<String, dynamic>
+          ? e.response?.data['message']?.toString() ??
+              e.response?.data['error']?.toString()
+          : null;
+      throw ApiException(
+        message: backendMessage ??
+            e.message ??
+            'Code OTP invalide ou expiré.',
+        statusCode: e.response?.statusCode,
+        data: e.response?.data,
+      );
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException(message: e.toString());
+    }
+  }
 }
