@@ -123,10 +123,16 @@ appBar: AppBar(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 children: [
-                  const _StatCard(
+                  _StatCard(
                     title: 'Matières',
                     value: '8',
                     icon: Icons.menu_book_outlined,
+                    onTap: () {
+                      Navigator.pushNamed(
+                        context,
+                        AppRoutes.matieres,
+                      );
+                    },
                   ),
 
                   _StatCard(
@@ -153,10 +159,16 @@ appBar: AppBar(
                   },
                   ),
 
-                  const _StatCard(
+                  _StatCard(
                     title: 'Corrigés disponibles',
                     value: '19',
                     icon: Icons.check_circle_outline,
+                     onTap: () {
+                    Navigator.pushNamed(
+                      context,
+                      AppRoutes.corriges,
+                    );
+                  },
                   ),
                 ],
               ),

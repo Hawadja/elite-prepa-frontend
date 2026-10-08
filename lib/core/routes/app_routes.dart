@@ -13,6 +13,7 @@ import '../../modules/ressources_pedagogiques/views/sujets_concours_view.dart';
 import '../../modules/ressources_pedagogiques/views/add_edit_sujet_view.dart';
 import '../../modules/ressources_pedagogiques/views/sujets_gestion_view.dart';
 import '../../modules/ressources_pedagogiques/views/sujet_detail_view.dart';
+import '../../modules/ressources_pedagogiques/views/corriges_view.dart';
 
 class AppRoutes {
   static const String home = '/';
@@ -29,6 +30,8 @@ class AppRoutes {
   static const String addEditSujet = '/add-edit-sujet';
   static const String sujetsGestion = '/sujets-gestion';
   static const String sujetDetail = '/sujet-detail';
+  static const String corriges = '/corriges';
+  static const String corrigeDetail = '/corrige-detail';
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
@@ -117,6 +120,11 @@ class AppRoutes {
         final hasCorrige = args?['hasCorrige'] ?? true;
         return MaterialPageRoute(
           builder: (_) => SujetDetailView(hasCorrige: hasCorrige),
+        );
+
+      case corriges:
+        return MaterialPageRoute(
+          builder: (_) => const CorrigesView(),
         );
 
       default:
