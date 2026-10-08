@@ -141,10 +141,16 @@ appBar: AppBar(
                     },
                   ),
 
-                  const _StatCard(
+                  _StatCard(
                     title: 'Sujets',
                     value: '27',
                     icon: Icons.assignment_outlined,
+                    onTap: () {
+                    Navigator.pushNamed(
+                      context,
+                      AppRoutes.sujetsConcours,
+                    );
+                  },
                   ),
 
                   const _StatCard(

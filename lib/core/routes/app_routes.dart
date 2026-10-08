@@ -9,6 +9,7 @@ import '../../modules/ressources_pedagogiques/views/delete_matiere_view.dart';
 import '../../modules/ressources_pedagogiques/views/add_edit_fiche_view.dart';
 import '../../modules/ressources_pedagogiques/views/fiches_cours_view.dart';
 import '../../modules/ressources_pedagogiques/views/delete_fiche_view.dart';
+import '../../modules/ressources_pedagogiques/views/sujets_concours_view.dart';
 
 class AppRoutes {
   static const String home = '/';
@@ -21,6 +22,8 @@ class AppRoutes {
   static const String fichesCours = '/fiches-cours';
   static const String deleteFiche = '/delete-fiche';
   static const String addFiche = '/add-fiche';
+  static const String sujetsConcours = '/sujets-concours';
+  static const String addSujet = '/add-sujet';
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
@@ -78,10 +81,11 @@ class AppRoutes {
           builder: (_) => DeleteFicheView(fiche: fiche),
         );
 
-      /*case addFiche:
+      // --- Sujets de concours ---
+      case sujetsConcours:
         return MaterialPageRoute(
-          builder: (_) => const AddFicheView(),
-        );*/
+          builder: (_) => const SujetsConcoursView(),
+        );
 
       default:
         return MaterialPageRoute(
