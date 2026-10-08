@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../utilisateurs/views/screens/login_screen.dart';
 import '../../utilisateurs/views/screens/register_screen.dart';
 
 class AppRoutes {
@@ -31,12 +32,7 @@ class AppRoutes {
 
       case login:
         return MaterialPageRoute(
-          builder: (_) => Scaffold(
-            appBar: AppBar(title: const Text('Connexion')),
-            body: const Center(
-              child: Text('Écran de Connexion'),
-            ),
-          ),
+          builder: (_) => const LoginScreen(),
         );
 
       case forgotPassword:
