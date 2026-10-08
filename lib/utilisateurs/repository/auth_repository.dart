@@ -219,4 +219,54 @@ class AuthRepository {
       throw ApiException(message: e.toString());
     }
   }
+
+  /// Renouvellement de l'access token avec un refresh token
+  /// Fait un POST vers /auth/refresh et retourne le nouveau access token (String)
+  Future<String> refreshToken(String refreshToken) async {
+    try {
+      final response = await _dioClient.dio.post(
+        '/auth/refresh',
+        data: {
+          'refreshToken': refreshToken,
+          'refresh_token': refreshToken,
+        },
+      );
+
+      final data = response.data;
+      if (data is Map<String, dynamic>) {
+        final token = data['accessToken'] ??
+            data['token'] ??
+            data['access_token'] ??
+            (data['data'] is Map<String, dynamic>
+                ? data['data']['accessToken'] ?? data['data']['token']
+                : null);
+
+        if (token != null && token.toString().isNotEmpty) {
+          return token.toString();
+        }
+      }
+
+      throw const ApiException(
+        message: 'Nouveau token non trouvé dans la réponse du serveur.',
+      );
+    } on DioException catch (e) {
+      if (e.error is ApiException) {
+        throw e.error as ApiException;
+      }
+      final backendMessage = e.response?.data is Map<String, dynamic>
+          ? e.response?.data['message']?.toString() ??
+              e.response?.data['error']?.toString()
+          : null;
+      throw ApiException(
+        message: backendMessage ??
+            e.message ??
+            'Session expirée. Veuillez vous re-connecter.',
+        statusCode: e.response?.statusCode,
+        data: e.response?.data,
+      );
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException(message: e.toString());
+    }
+  }
 }
