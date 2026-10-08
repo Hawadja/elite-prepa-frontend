@@ -1,99 +1,45 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../repository/auth_repository.dart';
-import '../../viewmodels/otp_cubit.dart';
+import '../../viewmodels/password_reset_cubit.dart';
 
-class OtpScreen extends StatelessWidget {
-  final String email;
+class ForgotPasswordScreen extends StatelessWidget {
   final AuthRepository? authRepository;
 
-  const OtpScreen({
-    super.key,
-    required this.email,
-    this.authRepository,
-  });
+  const ForgotPasswordScreen({super.key, this.authRepository});
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider<OtpCubit>(
-      create: (context) => OtpCubit(
+    return BlocProvider<PasswordResetCubit>(
+      create: (context) => PasswordResetCubit(
         authRepository ?? AuthRepository(),
       ),
-      child: _OtpView(email: email),
+      child: const _ForgotPasswordView(),
     );
   }
 }
 
-class _OtpView extends StatefulWidget {
-  final String email;
-
-  const _OtpView({required this.email});
+class _ForgotPasswordView extends StatefulWidget {
+  const _ForgotPasswordView();
 
   @override
-  State<_OtpView> createState() => _OtpViewState();
+  State<_ForgotPasswordView> createState() => _ForgotPasswordViewState();
 }
 
-class _OtpViewState extends State<_OtpView> {
+class _ForgotPasswordViewState extends State<_ForgotPasswordView> {
   final _formKey = GlobalKey<FormBuilderState>();
-  Timer? _timer;
-  int _secondsRemaining = 60;
 
   static const Color navyColor = Color(0xFF1F3F6E);
   static const Color goldColor = Color(0xFFF0A500);
 
-  @override
-  void initState() {
-    super.initState();
-    _startCountdown();
-  }
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
-  }
-
-  void _startCountdown() {
-    setState(() {
-      _secondsRemaining = 60;
-    });
-    _timer?.cancel();
-    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (_secondsRemaining > 0) {
-        setState(() {
-          _secondsRemaining--;
-        });
-      } else {
-        timer.cancel();
-      }
-    });
-  }
-
-  void _resendCode() {
-    if (_secondsRemaining > 0) return;
-    _startCountdown();
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content:
-            Text('Un nouveau code OTP a été envoyé à votre adresse email.'),
-        backgroundColor: navyColor,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-  }
-
   void _submitForm() {
     if (_formKey.currentState?.saveAndValidate() ?? false) {
-      final values = _formKey.currentState!.value;
-      final code = values['otp'] as String;
-
-      context.read<OtpCubit>().verifyOtp(widget.email, code);
+      final email = _formKey.currentState!.value['email'] as String;
+      context.read<PasswordResetCubit>().forgotPassword(email);
     }
   }
 
@@ -115,18 +61,21 @@ class _OtpViewState extends State<_OtpView> {
           },
         ),
       ),
-      body: BlocConsumer<OtpCubit, OtpState>(
+      body: BlocConsumer<PasswordResetCubit, PasswordResetState>(
         listener: (context, state) {
-          if (state is OtpSuccess) {
+          if (state is PasswordResetSuccess) {
+            final email =
+                _formKey.currentState?.value['email'] as String? ?? '';
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                content: Text('Vérification réussie ! Bienvenue sur Elite Prépa.'),
+                content: Text(
+                    'Demande envoyée ! Veuillez vérifier vos instructions par email.'),
                 backgroundColor: navyColor,
               ),
             );
             if (!context.mounted) return;
-            context.go('/home');
-          } else if (state is OtpError) {
+            context.push('/reset-password', extra: email);
+          } else if (state is PasswordResetError) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(state.message),
@@ -137,7 +86,7 @@ class _OtpViewState extends State<_OtpView> {
           }
         },
         builder: (context, state) {
-          final isLoading = state is OtpLoading;
+          final isLoading = state is PasswordResetLoading;
 
           return SafeArea(
             child: Center(
@@ -156,7 +105,7 @@ class _OtpViewState extends State<_OtpView> {
                           border: Border.all(color: goldColor, width: 2),
                         ),
                         child: const Icon(
-                          Icons.mark_email_read_outlined,
+                          Icons.lock_reset_rounded,
                           size: 56,
                           color: navyColor,
                         ),
@@ -164,7 +113,7 @@ class _OtpViewState extends State<_OtpView> {
                     ),
                     const SizedBox(height: 24),
                     const Text(
-                      'Vérification OTP',
+                      'Mot de passe oublié',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 28,
@@ -174,12 +123,10 @@ class _OtpViewState extends State<_OtpView> {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    Text(
-                      widget.email.isNotEmpty
-                          ? 'Saisissez le code à 6 chiffres envoyé à\n${widget.email}'
-                          : 'Saisissez le code à 6 chiffres envoyé par email',
+                    const Text(
+                      'Saisissez votre adresse email pour recevoir les instructions de réinitialisation',
                       textAlign: TextAlign.center,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 15,
                         color: Colors.black54,
                         height: 1.4,
@@ -190,71 +137,50 @@ class _OtpViewState extends State<_OtpView> {
                     FormBuilder(
                       key: _formKey,
                       child: FormBuilderTextField(
-                        name: 'otp',
+                        name: 'email',
                         enabled: !isLoading,
-                        keyboardType: TextInputType.number,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          fontSize: 26,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 14,
-                          color: navyColor,
-                        ),
-                        inputFormatters: [
-                          FilteringTextInputFormatter.digitsOnly,
-                          LengthLimitingTextInputFormatter(6),
-                        ],
+                        keyboardType: TextInputType.emailAddress,
                         decoration: InputDecoration(
-                          hintText: '000000',
-                          hintStyle: TextStyle(
-                            fontSize: 26,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 14,
-                            color: Colors.grey.shade400,
-                          ),
+                          labelText: 'Adresse Email',
+                          hintText: 'exemple@domain.com',
+                          labelStyle:
+                              const TextStyle(color: navyColor, fontSize: 14),
+                          prefixIcon: Icon(Icons.email_outlined,
+                              color: navyColor.withValues(alpha: 0.7)),
                           filled: true,
                           fillColor: Colors.white,
                           contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 18),
+                              horizontal: 16, vertical: 16),
                           border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(14),
+                            borderRadius: BorderRadius.circular(12),
                             borderSide: BorderSide(color: Colors.grey.shade300),
                           ),
                           enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(14),
+                            borderRadius: BorderRadius.circular(12),
                             borderSide: BorderSide(color: Colors.grey.shade300),
                           ),
                           focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(14),
+                            borderRadius: BorderRadius.circular(12),
                             borderSide:
                                 const BorderSide(color: goldColor, width: 2),
                           ),
                           errorBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(14),
+                            borderRadius: BorderRadius.circular(12),
                             borderSide: const BorderSide(
                                 color: Colors.redAccent, width: 1.5),
                           ),
                           focusedErrorBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(14),
+                            borderRadius: BorderRadius.circular(12),
                             borderSide: const BorderSide(
                                 color: Colors.redAccent, width: 2),
                           ),
                         ),
                         validator: FormBuilderValidators.compose([
                           FormBuilderValidators.required(
-                            errorText: 'Le code OTP est obligatoire',
+                            errorText: 'L\'email est obligatoire',
                           ),
-                          FormBuilderValidators.numeric(
-                            errorText:
-                                'Le code doit contenir uniquement des chiffres',
-                          ),
-                          FormBuilderValidators.minLength(
-                            6,
-                            errorText: 'Le code doit contenir 6 chiffres',
-                          ),
-                          FormBuilderValidators.maxLength(
-                            6,
-                            errorText: 'Le code doit contenir 6 chiffres',
+                          FormBuilderValidators.email(
+                            errorText: 'Veuillez saisir un email valide',
                           ),
                         ]),
                       ),
@@ -283,34 +209,13 @@ class _OtpViewState extends State<_OtpView> {
                                 ),
                               )
                             : const Text(
-                                'Valider le code',
+                                'Envoyer les instructions',
                                 style: TextStyle(
                                   fontSize: 17,
                                   fontWeight: FontWeight.bold,
                                   color: Colors.white,
                                 ),
                               ),
-                      ),
-                    ),
-                    const SizedBox(height: 28),
-
-                    Center(
-                      child: TextButton(
-                        onPressed: (_secondsRemaining > 0 || isLoading)
-                            ? null
-                            : _resendCode,
-                        child: Text(
-                          _secondsRemaining > 0
-                              ? 'Renvoyer le code dans ${_secondsRemaining}s'
-                              : 'Renvoyer le code OTP',
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
-                            color: _secondsRemaining > 0
-                                ? Colors.grey.shade500
-                                : goldColor,
-                          ),
-                        ),
                       ),
                     ),
                   ],

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import '../../utilisateurs/views/screens/forgot_password_screen.dart';
 import '../../utilisateurs/views/screens/login_screen.dart';
 import '../../utilisateurs/views/screens/otp_screen.dart';
 import '../../utilisateurs/views/screens/register_screen.dart';
+import '../../utilisateurs/views/screens/reset_password_screen.dart';
 
 class AppRoutes {
   static const String home = '/';
@@ -33,22 +35,13 @@ class AppRoutes {
 
       case forgotPassword:
         return MaterialPageRoute(
-          builder: (_) => Scaffold(
-            appBar: AppBar(title: const Text('Mot de passe oublié')),
-            body: const Center(
-              child: Text('Écran Mot de passe oublié'),
-            ),
-          ),
+          builder: (_) => const ForgotPasswordScreen(),
         );
 
       case resetPassword:
+        final token = settings.arguments as String?;
         return MaterialPageRoute(
-          builder: (_) => Scaffold(
-            appBar: AppBar(title: const Text('Réinitialisation')),
-            body: const Center(
-              child: Text('Écran de Réinitialisation'),
-            ),
-          ),
+          builder: (_) => ResetPasswordScreen(token: token),
         );
 
       case profil:

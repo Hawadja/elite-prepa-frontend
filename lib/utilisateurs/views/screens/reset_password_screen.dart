@@ -5,32 +5,39 @@ import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../repository/auth_repository.dart';
-import '../../viewmodels/register_cubit.dart';
+import '../../viewmodels/password_reset_cubit.dart';
 
-class RegisterScreen extends StatelessWidget {
+class ResetPasswordScreen extends StatelessWidget {
+  final String? token;
   final AuthRepository? authRepository;
 
-  const RegisterScreen({super.key, this.authRepository});
+  const ResetPasswordScreen({
+    super.key,
+    this.token,
+    this.authRepository,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider<RegisterCubit>(
-      create: (context) => RegisterCubit(
+    return BlocProvider<PasswordResetCubit>(
+      create: (context) => PasswordResetCubit(
         authRepository ?? AuthRepository(),
       ),
-      child: const _RegisterView(),
+      child: _ResetPasswordView(token: token),
     );
   }
 }
 
-class _RegisterView extends StatefulWidget {
-  const _RegisterView();
+class _ResetPasswordView extends StatefulWidget {
+  final String? token;
+
+  const _ResetPasswordView({this.token});
 
   @override
-  State<_RegisterView> createState() => _RegisterViewState();
+  State<_ResetPasswordView> createState() => _ResetPasswordViewState();
 }
 
-class _RegisterViewState extends State<_RegisterView> {
+class _ResetPasswordViewState extends State<_ResetPasswordView> {
   final _formKey = GlobalKey<FormBuilderState>();
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
@@ -41,22 +48,21 @@ class _RegisterViewState extends State<_RegisterView> {
   void _submitForm() {
     if (_formKey.currentState?.saveAndValidate() ?? false) {
       final values = _formKey.currentState!.value;
-      final nom = values['nom'] as String;
-      final prenom = values['prenom'] as String;
-      final email = values['email'] as String;
-      final motDePasse = values['motDePasse'] as String;
+      final token = (widget.token != null && widget.token!.isNotEmpty)
+          ? widget.token!
+          : (values['token'] as String? ?? '');
+      final nouveauMotDePasse = values['nouveauMotDePasse'] as String;
 
-      context.read<RegisterCubit>().register(
-            nom: nom,
-            prenom: prenom,
-            email: email,
-            motDePasse: motDePasse,
-          );
+      context
+          .read<PasswordResetCubit>()
+          .resetPassword(token, nouveauMotDePasse);
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final showTokenField = widget.token == null || widget.token!.isEmpty;
+
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
       appBar: AppBar(
@@ -73,20 +79,18 @@ class _RegisterViewState extends State<_RegisterView> {
           },
         ),
       ),
-      body: BlocConsumer<RegisterCubit, RegisterState>(
+      body: BlocConsumer<PasswordResetCubit, PasswordResetState>(
         listener: (context, state) {
-          if (state is RegisterSuccess) {
-            final email = state.user.email;
+          if (state is PasswordResetSuccess) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                content:
-                    Text('Compte créé ! Veuillez vérifier votre code OTP.'),
+                content: Text('Mot de passe réinitialisé avec succès !'),
                 backgroundColor: navyColor,
               ),
             );
             if (!context.mounted) return;
-            context.push('/otp', extra: email);
-          } else if (state is RegisterError) {
+            context.go('/login');
+          } else if (state is PasswordResetError) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(state.message),
@@ -97,34 +101,34 @@ class _RegisterViewState extends State<_RegisterView> {
           }
         },
         builder: (context, state) {
-          final isLoading = state is RegisterLoading;
+          final isLoading = state is PasswordResetLoading;
 
           return SafeArea(
             child: Center(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.symmetric(
-                    horizontal: 24.0, vertical: 16.0),
+                    horizontal: 24.0, vertical: 24.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Center(
                       child: Container(
-                        padding: const EdgeInsets.all(16),
+                        padding: const EdgeInsets.all(20),
                         decoration: BoxDecoration(
                           color: navyColor.withValues(alpha: 0.08),
                           shape: BoxShape.circle,
                           border: Border.all(color: goldColor, width: 2),
                         ),
                         child: const Icon(
-                          Icons.school_rounded,
-                          size: 48,
+                          Icons.vpn_key_outlined,
+                          size: 56,
                           color: navyColor,
                         ),
                       ),
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 24),
                     const Text(
-                      'Créer un compte',
+                      'Nouveau mot de passe',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 28,
@@ -135,76 +139,42 @@ class _RegisterViewState extends State<_RegisterView> {
                     ),
                     const SizedBox(height: 8),
                     const Text(
-                      'Rejoignez la plateforme Elite Prépa',
+                      'Veuillez saisir votre nouveau mot de passe',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 15,
                         color: Colors.black54,
                       ),
                     ),
-                    const SizedBox(height: 32),
+                    const SizedBox(height: 36),
 
                     FormBuilder(
                       key: _formKey,
                       child: Column(
                         children: [
-                          FormBuilderTextField(
-                            name: 'nom',
-                            enabled: !isLoading,
-                            textCapitalization: TextCapitalization.words,
-                            decoration: _inputDecoration(
-                              label: 'Nom',
-                              hint: 'Entrez votre nom',
-                              icon: Icons.person_outline,
+                          if (showTokenField) ...[
+                            FormBuilderTextField(
+                              name: 'token',
+                              enabled: !isLoading,
+                              decoration: _inputDecoration(
+                                label: 'Token de réinitialisation',
+                                hint: 'Entrez le code/token reçu',
+                                icon: Icons.key_outlined,
+                              ),
+                              validator: FormBuilderValidators.compose([
+                                FormBuilderValidators.required(
+                                  errorText: 'Le token est obligatoire',
+                                ),
+                              ]),
                             ),
-                            validator: FormBuilderValidators.compose([
-                              FormBuilderValidators.required(
-                                errorText: 'Le nom est obligatoire',
-                              ),
-                            ]),
-                          ),
-                          const SizedBox(height: 16),
+                            const SizedBox(height: 16),
+                          ],
                           FormBuilderTextField(
-                            name: 'prenom',
-                            enabled: !isLoading,
-                            textCapitalization: TextCapitalization.words,
-                            decoration: _inputDecoration(
-                              label: 'Prénom',
-                              hint: 'Entrez votre prénom',
-                              icon: Icons.person_outline_sharp,
-                            ),
-                            validator: FormBuilderValidators.compose([
-                              FormBuilderValidators.required(
-                                errorText: 'Le prénom est obligatoire',
-                              ),
-                            ]),
-                          ),
-                          const SizedBox(height: 16),
-                          FormBuilderTextField(
-                            name: 'email',
-                            enabled: !isLoading,
-                            keyboardType: TextInputType.emailAddress,
-                            decoration: _inputDecoration(
-                              label: 'Adresse Email',
-                              hint: 'exemple@domain.com',
-                              icon: Icons.email_outlined,
-                            ),
-                            validator: FormBuilderValidators.compose([
-                              FormBuilderValidators.required(
-                                errorText: 'L\'email est obligatoire',
-                              ),
-                              FormBuilderValidators.email(
-                                errorText: 'Veuillez saisir un email valide',
-                              ),
-                            ]),
-                          ),
-                          const SizedBox(height: 16),
-                          FormBuilderTextField(
-                            name: 'motDePasse',
+                            name: 'nouveauMotDePasse',
                             enabled: !isLoading,
                             obscureText: _obscurePassword,
                             decoration: _inputDecoration(
-                              label: 'Mot de passe',
+                              label: 'Nouveau mot de passe',
                               hint: '8 caractères minimum',
                               icon: Icons.lock_outline,
                               suffixIcon: IconButton(
@@ -239,7 +209,7 @@ class _RegisterViewState extends State<_RegisterView> {
                             obscureText: _obscureConfirmPassword,
                             decoration: _inputDecoration(
                               label: 'Confirmation du mot de passe',
-                              hint: 'Répétez votre mot de passe',
+                              hint: 'Répétez le nouveau mot de passe',
                               icon: Icons.lock_clock_outlined,
                               suffixIcon: IconButton(
                                 icon: Icon(
@@ -261,7 +231,7 @@ class _RegisterViewState extends State<_RegisterView> {
                                 return 'La confirmation est obligatoire';
                               }
                               final password = _formKey.currentState
-                                  ?.fields['motDePasse']?.value;
+                                  ?.fields['nouveauMotDePasse']?.value;
                               if (value != password) {
                                 return 'Les mots de passe ne correspondent pas';
                               }
@@ -284,7 +254,6 @@ class _RegisterViewState extends State<_RegisterView> {
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(14),
                           ),
-                          padding: const EdgeInsets.symmetric(vertical: 14),
                         ),
                         child: isLoading
                             ? const SizedBox(
@@ -296,7 +265,7 @@ class _RegisterViewState extends State<_RegisterView> {
                                 ),
                               )
                             : const Text(
-                                'S\'inscrire',
+                                'Réinitialiser le mot de passe',
                                 style: TextStyle(
                                   fontSize: 17,
                                   fontWeight: FontWeight.bold,
@@ -304,33 +273,6 @@ class _RegisterViewState extends State<_RegisterView> {
                                 ),
                               ),
                       ),
-                    ),
-                    const SizedBox(height: 24),
-
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Text(
-                          'Déjà un compte ? ',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.black54,
-                          ),
-                        ),
-                        GestureDetector(
-                          onTap: () {
-                            context.go('/login');
-                          },
-                          child: const Text(
-                            'Se connecter',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                              color: goldColor,
-                            ),
-                          ),
-                        ),
-                      ],
                     ),
                   ],
                 ),

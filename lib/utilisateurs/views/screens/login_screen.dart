@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
+import 'package:go_router/go_router.dart';
 
-import '../../../core/routes/app_routes.dart';
 import '../../repository/auth_repository.dart';
 import '../../viewmodels/login_cubit.dart';
 
@@ -61,10 +61,7 @@ class _LoginViewState extends State<_LoginView> {
               ),
             );
             if (!context.mounted) return;
-            Navigator.of(context).pushNamedAndRemoveUntil(
-              AppRoutes.home,
-              (route) => false,
-            );
+            context.go('/home');
           } else if (state is LoginError) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
@@ -86,7 +83,6 @@ class _LoginViewState extends State<_LoginView> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // En-tête / Brand Icon
                     Center(
                       child: Container(
                         padding: const EdgeInsets.all(20),
@@ -124,12 +120,10 @@ class _LoginViewState extends State<_LoginView> {
                     ),
                     const SizedBox(height: 36),
 
-                    // Formulaire
                     FormBuilder(
                       key: _formKey,
                       child: Column(
                         children: [
-                          // Email
                           FormBuilderTextField(
                             name: 'email',
                             enabled: !isLoading,
@@ -149,8 +143,6 @@ class _LoginViewState extends State<_LoginView> {
                             ]),
                           ),
                           const SizedBox(height: 18),
-
-                          // Mot de passe
                           FormBuilderTextField(
                             name: 'motDePasse',
                             enabled: !isLoading,
@@ -183,16 +175,13 @@ class _LoginViewState extends State<_LoginView> {
                       ),
                     ),
 
-                    // Lien Mot de passe oublié
                     Align(
                       alignment: Alignment.centerRight,
                       child: TextButton(
                         onPressed: isLoading
                             ? null
                             : () {
-                                Navigator.of(context).pushNamed(
-                                  AppRoutes.forgotPassword,
-                                );
+                                context.push('/forgot-password');
                               },
                         child: const Text(
                           'Mot de passe oublié ?',
@@ -206,7 +195,6 @@ class _LoginViewState extends State<_LoginView> {
                     ),
                     const SizedBox(height: 24),
 
-                    // Bouton Se Connecter
                     SizedBox(
                       height: 54,
                       child: ElevatedButton(
@@ -240,7 +228,6 @@ class _LoginViewState extends State<_LoginView> {
                     ),
                     const SizedBox(height: 28),
 
-                    // Lien vers l'inscription
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -253,9 +240,7 @@ class _LoginViewState extends State<_LoginView> {
                         ),
                         GestureDetector(
                           onTap: () {
-                            Navigator.of(context).pushReplacementNamed(
-                              AppRoutes.register,
-                            );
+                            context.push('/register');
                           },
                           child: const Text(
                             'S\'inscrire',
