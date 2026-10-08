@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-
 import '../../../core/routes/app_routes.dart';
 
 class SujetGestionItem {
@@ -194,14 +193,15 @@ class _SujetsGestionViewState extends State<SujetsGestionView> {
   // VOIR
   // ============================================================
 
-  void _onVoirSujet(SujetGestionItem sujet) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Ouverture de : ${sujet.titre}'),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-  }
+void _onVoirSujet(SujetGestionItem sujet) {
+  Navigator.pushNamed(
+    context,
+    AppRoutes.sujetDetail,
+    arguments: {
+      'hasCorrige': sujet.aCorrige,
+    },
+  );
+}
 
   // ============================================================
   // TÉLÉCHARGER

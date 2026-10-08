@@ -12,6 +12,7 @@ import '../../modules/ressources_pedagogiques/views/delete_fiche_view.dart';
 import '../../modules/ressources_pedagogiques/views/sujets_concours_view.dart';
 import '../../modules/ressources_pedagogiques/views/add_edit_sujet_view.dart';
 import '../../modules/ressources_pedagogiques/views/sujets_gestion_view.dart';
+import '../../modules/ressources_pedagogiques/views/sujet_detail_view.dart';
 
 class AppRoutes {
   static const String home = '/';
@@ -27,6 +28,7 @@ class AppRoutes {
   static const String sujetsConcours = '/sujets-concours';
   static const String addEditSujet = '/add-edit-sujet';
   static const String sujetsGestion = '/sujets-gestion';
+  static const String sujetDetail = '/sujet-detail';
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
@@ -108,6 +110,13 @@ class AppRoutes {
             anneeAcademique: args?['anneeAcademique'],
             nomFichier: args?['nomFichier'],
           ),
+        );
+
+      case sujetDetail:
+        final args = settings.arguments as Map<String, dynamic>?;
+        final hasCorrige = args?['hasCorrige'] ?? true;
+        return MaterialPageRoute(
+          builder: (_) => SujetDetailView(hasCorrige: hasCorrige),
         );
 
       default:
