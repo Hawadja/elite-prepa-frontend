@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import '../../core/errors/app_exception.dart';
 import '../../core/network/dio_client.dart';
+import '../models/auth_response.dart';
 import '../models/user_model.dart';
 
 class AuthRepository {
@@ -103,6 +104,48 @@ class AuthRepository {
         message: backendMessage ??
             e.message ??
             'Code OTP invalide ou expiré.',
+        statusCode: e.response?.statusCode,
+        data: e.response?.data,
+      );
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException(message: e.toString());
+    }
+  }
+
+  /// Connexion de l'utilisateur avec email et mot de passe
+  /// Fait un POST vers /auth/login et retourne un AuthResponse (UserModel + tokens)
+  Future<AuthResponse> login(String email, String motDePasse) async {
+    try {
+      final response = await _dioClient.dio.post(
+        '/auth/login',
+        data: {
+          'email': email,
+          'motDePasse': motDePasse,
+          'password': motDePasse,
+        },
+      );
+
+      final data = response.data;
+      if (data is Map<String, dynamic>) {
+        return AuthResponse.fromJson(data);
+      }
+
+      throw const ApiException(
+        message: 'Format de réponse serveur invalide.',
+      );
+    } on DioException catch (e) {
+      if (e.error is ApiException) {
+        throw e.error as ApiException;
+      }
+      final backendMessage = e.response?.data is Map<String, dynamic>
+          ? e.response?.data['message']?.toString() ??
+              e.response?.data['error']?.toString()
+          : null;
+      throw ApiException(
+        message: backendMessage ??
+            e.message ??
+            'Identifiants incorrects. Veuillez réessayer.',
         statusCode: e.response?.statusCode,
         data: e.response?.data,
       );
