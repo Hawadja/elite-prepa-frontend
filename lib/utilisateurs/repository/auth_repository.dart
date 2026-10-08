@@ -4,11 +4,20 @@ import '../../core/network/dio_client.dart';
 import '../models/auth_response.dart';
 import '../models/user_model.dart';
 
+import '../../core/storage/token_storage.dart';
+
 class AuthRepository {
   final DioClient _dioClient;
+  final TokenStorage _tokenStorage;
 
-  AuthRepository({DioClient? dioClient})
-      : _dioClient = dioClient ?? DioClient();
+  AuthRepository({DioClient? dioClient, TokenStorage? tokenStorage})
+      : _dioClient = dioClient ?? DioClient(),
+        _tokenStorage = tokenStorage ?? TokenStorage();
+
+  /// Déconnecte l'utilisateur en effaçant les tokens stockés
+  Future<void> logout() async {
+    await _tokenStorage.clearTokens();
+  }
 
   /// Inscription d'un nouvel utilisateur
   /// Fait un POST vers /auth/register et retourne l'utilisateur créé ou lève une ApiException

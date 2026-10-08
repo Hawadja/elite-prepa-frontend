@@ -1,0 +1,252 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
+
+import '../../utilisateurs/viewmodels/auth_cubit.dart';
+import '../../utilisateurs/views/screens/forgot_password_screen.dart';
+import '../../utilisateurs/views/screens/login_screen.dart';
+import '../../utilisateurs/views/screens/otp_screen.dart';
+import '../../utilisateurs/views/screens/profil_screen.dart';
+import '../../utilisateurs/views/screens/register_screen.dart';
+import '../../utilisateurs/views/screens/reset_password_screen.dart';
+import '../storage/token_storage.dart';
+
+class AppRouter {
+  static final TokenStorage _tokenStorage = TokenStorage();
+
+  static final GoRouter router = GoRouter(
+    initialLocation: '/splash',
+    refreshListenable: AuthNotifier.instance,
+    redirect: (BuildContext context, GoRouterState state) async {
+      final token = await _tokenStorage.getAccessToken();
+      final hasToken = token != null && token.isNotEmpty;
+      final location = state.matchedLocation;
+
+      final unauthRoutes = [
+        '/splash',
+        '/login',
+        '/register',
+        '/otp',
+        '/forgot-password',
+        '/reset-password',
+      ];
+
+      final isUnauthRoute = unauthRoutes.contains(location);
+
+      if (hasToken && isUnauthRoute) {
+        return '/home';
+      }
+
+      if (!hasToken && (location == '/home' || location == '/profil')) {
+        return '/login';
+      }
+
+      return null;
+    },
+    routes: [
+      GoRoute(
+        path: '/splash',
+        builder: (context, state) => const SplashScreen(),
+      ),
+      GoRoute(
+        path: '/login',
+        builder: (context, state) => const LoginScreen(),
+      ),
+      GoRoute(
+        path: '/register',
+        builder: (context, state) => const RegisterScreen(),
+      ),
+      GoRoute(
+        path: '/otp',
+        builder: (context, state) {
+          final email = state.extra as String? ?? '';
+          return OtpScreen(email: email);
+        },
+      ),
+      GoRoute(
+        path: '/forgot-password',
+        builder: (context, state) => const ForgotPasswordScreen(),
+      ),
+      GoRoute(
+        path: '/reset-password',
+        builder: (context, state) {
+          final token = state.extra as String?;
+          return ResetPasswordScreen(token: token);
+        },
+      ),
+      GoRoute(
+        path: '/home',
+        builder: (context, state) => const HomeScreen(),
+      ),
+      GoRoute(
+        path: '/profil',
+        builder: (context, state) {
+          final userId = state.extra as String? ?? '';
+          return ProfilScreen(userId: userId);
+        },
+      ),
+    ],
+  );
+}
+
+class SplashScreen extends StatefulWidget {
+  const SplashScreen({super.key});
+
+  @override
+  State<SplashScreen> createState() => _SplashScreenState();
+}
+
+class _SplashScreenState extends State<SplashScreen> {
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(() {
+      if (mounted) {
+        context.read<AuthCubit>().checkAuthStatus();
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    const navyColor = Color(0xFF1F3F6E);
+    const goldColor = Color(0xFFF0A500);
+
+    return Scaffold(
+      backgroundColor: navyColor,
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+                border: Border.all(color: goldColor, width: 2),
+              ),
+              child: const Icon(
+                Icons.school_rounded,
+                size: 64,
+                color: goldColor,
+              ),
+            ),
+            const SizedBox(height: 24),
+            const Text(
+              'Elite Prépa',
+              style: TextStyle(
+                fontSize: 32,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+            const SizedBox(height: 32),
+            const CircularProgressIndicator(color: goldColor),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class HomeScreen extends StatelessWidget {
+  const HomeScreen({super.key});
+
+  static const Color navyColor = Color(0xFF1F3F6E);
+  static const Color goldColor = Color(0xFFF0A500);
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF5F7FA),
+      appBar: AppBar(
+        title: const Text('Elite Prépa - Accueil'),
+        backgroundColor: navyColor,
+        foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.person, color: goldColor),
+            onPressed: () {
+              context.push('/profil');
+            },
+            tooltip: 'Profil',
+          ),
+          IconButton(
+            icon: const Icon(Icons.logout_rounded, color: Colors.white),
+            onPressed: () {
+              context.read<AuthCubit>().logout();
+            },
+            tooltip: 'Déconnexion',
+          ),
+        ],
+      ),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [navyColor, Color(0xFF2C538F)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: const Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Bienvenue sur Elite Prépa !',
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                    SizedBox(height: 8),
+                    Text(
+                      'Votre plateforme de gestion et de prépa.',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.white70,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 32),
+              const Text(
+                'Actions rapides',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: navyColor,
+                ),
+              ),
+              const SizedBox(height: 16),
+              ListTile(
+                leading: const Icon(Icons.account_circle, color: goldColor),
+                title: const Text('Gérer mon profil'),
+                subtitle: const Text('Consulter et modifier mes informations'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () {
+                  context.push('/profil');
+                },
+                tileColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  side: BorderSide(color: Colors.grey.shade200),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
