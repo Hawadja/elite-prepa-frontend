@@ -6,19 +6,27 @@ class SujetConcoursItem {
   final String id;
   final String titre;
   final String matiere;
+  final String description;
+  final String concours;
+  final String anneeAcademique;
+  final String nomFichier;
   final String filiere;
   final String duree;
   final bool corrigeDisponible;
   final bool showActionsAdmin;
 
-  SujetConcoursItem({
+  const SujetConcoursItem({
     required this.id,
     required this.titre,
     required this.matiere,
+    required this.description,
+    required this.concours,
+    required this.anneeAcademique,
+    required this.nomFichier,
     required this.filiere,
     required this.duree,
-    this.corrigeDisponible = true,
-    this.showActionsAdmin = false,
+    required this.corrigeDisponible,
+    required this.showActionsAdmin,
   });
 }
 
@@ -49,35 +57,52 @@ class _SujetsConcoursViewState extends State<SujetsConcoursView> {
   // DONNÉES DE DÉMONSTRATION
   // ============================================================
 
-  final List<SujetConcoursItem> _sujets = [
-    SujetConcoursItem(
-      id: '1',
-      titre: 'Mines-Ponts 2025 · Maths I',
-      matiere: 'Mathématiques',
-      filiere: 'MP',
-      duree: '4 h',
-      corrigeDisponible: true,
-      showActionsAdmin: false,
-    ),
-    SujetConcoursItem(
-      id: '2',
-      titre: 'CentraleSupélec 2025 · Physique',
-      matiere: 'Physique',
-      filiere: 'PSI',
-      duree: '4 h',
-      corrigeDisponible: true,
-      showActionsAdmin: false,
-    ),
-    SujetConcoursItem(
-      id: '3',
-      titre: 'CCINP 2024 · Informatique',
-      matiere: 'Informatique',
-      filiere: 'MP',
-      duree: '3 h',
-      corrigeDisponible: false,
-      showActionsAdmin: true,
-    ),
-  ];
+final List<SujetConcoursItem> _sujets = [
+  const SujetConcoursItem(
+    id: '1',
+    titre: 'Mines-Ponts 2025 · Maths I',
+    matiere: 'Mathématiques',
+    description:
+        'Sujet de mathématiques du concours Mines-Ponts 2025.',
+    concours: 'Mines-Ponts',
+    anneeAcademique: '2024-2025',
+    nomFichier: 'mines_ponts_2025_maths_1.pdf',
+    filiere: 'MP',
+    duree: '4 h',
+    corrigeDisponible: true,
+    showActionsAdmin: false,
+  ),
+
+  const SujetConcoursItem(
+    id: '2',
+    titre: 'CentraleSupélec 2025 · Physique',
+    matiere: 'Physique',
+    description:
+        'Sujet de physique du concours CentraleSupélec 2025.',
+    concours: 'CentraleSupélec',
+    anneeAcademique: '2024-2025',
+    nomFichier: 'centrale_supelec_2025_physique.pdf',
+    filiere: 'PSI',
+    duree: '4 h',
+    corrigeDisponible: true,
+    showActionsAdmin: false,
+  ),
+
+  const SujetConcoursItem(
+    id: '3',
+    titre: 'CCINP 2024 · Informatique',
+    matiere: 'Informatique',
+    description:
+        'Sujet d’informatique du concours CCINP 2024.',
+    concours: 'CCINP',
+    anneeAcademique: '2023-2024',
+    nomFichier: 'ccinP_2024_informatique.pdf',
+    filiere: 'MP',
+    duree: '3 h',
+    corrigeDisponible: false,
+    showActionsAdmin: true,
+  ),
+];
 
   @override
   void dispose() {
@@ -130,7 +155,7 @@ class _SujetsConcoursViewState extends State<SujetsConcoursView> {
   Future<void> _onAddSujet() async {
     final result = await Navigator.pushNamed(
       context,
-      AppRoutes.addSujet,
+      AppRoutes.addEditSujet,
     );
 
     if (result == true && mounted) {
@@ -158,13 +183,27 @@ class _SujetsConcoursViewState extends State<SujetsConcoursView> {
     );
   }
 
-  void _onModifierSujet(SujetConcoursItem sujet) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Modifier : ${sujet.titre}'),
-      ),
-    );
+Future<void> _onModifierSujet(
+  SujetConcoursItem sujet,
+) async {
+  final result = await Navigator.pushNamed(
+    context,
+    AppRoutes.addEditSujet,
+    arguments: {
+      'id': sujet.id,
+      'titre': sujet.titre,
+      'matiere': sujet.matiere,
+      'description': sujet.description,
+      'concours': sujet.concours,
+      'anneeAcademique': sujet.anneeAcademique,
+      'nomFichier': sujet.nomFichier,
+    },
+  );
+
+  if (result == true && mounted) {
+    setState(() {});
   }
+}
 
   void _onSupprimerSujet(SujetConcoursItem sujet) {
     ScaffoldMessenger.of(context).showSnackBar(

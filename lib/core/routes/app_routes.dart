@@ -10,7 +10,7 @@ import '../../modules/ressources_pedagogiques/views/add_edit_fiche_view.dart';
 import '../../modules/ressources_pedagogiques/views/fiches_cours_view.dart';
 import '../../modules/ressources_pedagogiques/views/delete_fiche_view.dart';
 import '../../modules/ressources_pedagogiques/views/sujets_concours_view.dart';
-import '../../modules/ressources_pedagogiques/views/add_sujet_view.dart';
+import '../../modules/ressources_pedagogiques/views/add_edit_sujet_view.dart';
 
 class AppRoutes {
   static const String home = '/';
@@ -24,7 +24,7 @@ class AppRoutes {
   static const String deleteFiche = '/delete-fiche';
   static const String addFiche = '/add-fiche';
   static const String sujetsConcours = '/sujets-concours';
-  static const String addSujet = '/add-sujet';
+  static const String addEditSujet = '/add_edit-sujet';
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
@@ -88,10 +88,20 @@ class AppRoutes {
           builder: (_) => const SujetsConcoursView(),
         );
 
-      case addSujet:
-        return MaterialPageRoute(
-          builder: (_) => const AddSujetView(),
-        );
+     case addEditSujet:
+  final args = settings.arguments as Map<String, String>?;
+
+  return MaterialPageRoute(
+    builder: (_) => AddEditSujetView(
+      id: args?['id'],
+      titre: args?['titre'],
+      matiere: args?['matiere'],
+      description: args?['description'],
+      concours: args?['concours'],
+      anneeAcademique: args?['anneeAcademique'],
+      nomFichier: args?['nomFichier'],
+    ),
+  );
 
       default:
         return MaterialPageRoute(
