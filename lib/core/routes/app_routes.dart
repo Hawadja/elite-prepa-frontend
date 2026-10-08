@@ -10,6 +10,7 @@ import '../../modules/ressources_pedagogiques/views/add_edit_fiche_view.dart';
 import '../../modules/ressources_pedagogiques/views/fiches_cours_view.dart';
 import '../../modules/ressources_pedagogiques/views/delete_fiche_view.dart';
 import '../../modules/ressources_pedagogiques/views/sujets_concours_view.dart';
+import '../../modules/ressources_pedagogiques/views/add_sujet_view.dart';
 
 class AppRoutes {
   static const String home = '/';
@@ -85,6 +86,11 @@ class AppRoutes {
       case sujetsConcours:
         return MaterialPageRoute(
           builder: (_) => const SujetsConcoursView(),
+        );
+
+      case addSujet:
+        return MaterialPageRoute(
+          builder: (_) => const AddSujetView(),
         );
 
       default:
