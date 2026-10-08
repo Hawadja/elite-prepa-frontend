@@ -1,13 +1,21 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import '../errors/app_exception.dart';
+import '../storage/token_storage.dart';
 
 const String apiBaseUrl = 'https://api.eliteprepa.com/api';
 
 class DioClient {
   late final Dio _dio;
+  final TokenStorage _tokenStorage;
+  final VoidCallback? _onLogout;
 
-  DioClient({Dio? dio, String? baseUrl}) {
+  DioClient({
+    Dio? dio,
+    String? baseUrl,
+    TokenStorage? tokenStorage,
+    this._onLogout,
+  })  : _tokenStorage = tokenStorage ?? TokenStorage() {
     _dio = dio ??
         Dio(
           BaseOptions(
@@ -23,7 +31,12 @@ class DioClient {
 
     _dio.interceptors.add(
       InterceptorsWrapper(
-        onRequest: (options, handler) {
+        onRequest: (options, handler) async {
+          final accessToken = await _tokenStorage.getAccessToken();
+          if (accessToken != null && accessToken.isNotEmpty) {
+            options.headers['Authorization'] = 'Bearer $accessToken';
+          }
+
           if (kDebugMode) {
             debugPrint('---> ${options.method.toUpperCase()} ${options.uri}');
             debugPrint('Headers: ${options.headers}');
@@ -41,7 +54,60 @@ class DioClient {
           }
           return handler.next(response);
         },
-        onError: (DioException error, handler) {
+        onError: (DioException error, handler) async {
+          final path = error.requestOptions.path;
+          final isAuthEndpoint = path.contains('/auth/login') ||
+              path.contains('/auth/refresh') ||
+              path.contains('/auth/register');
+          final isRetry = error.requestOptions.extra['isRetry'] == true;
+
+          if (error.response?.statusCode == 401 && !isAuthEndpoint && !isRetry) {
+            try {
+              final refreshToken = await _tokenStorage.getRefreshToken();
+              if (refreshToken != null && refreshToken.isNotEmpty) {
+                final refreshDio =
+                    Dio(BaseOptions(baseUrl: _dio.options.baseUrl));
+                final response = await refreshDio.post(
+                  '/auth/refresh',
+                  data: {
+                    'refreshToken': refreshToken,
+                    'refresh_token': refreshToken,
+                  },
+                );
+
+                final data = response.data;
+                String? newAccessToken;
+                if (data is Map<String, dynamic>) {
+                  newAccessToken = data['accessToken']?.toString() ??
+                      data['token']?.toString() ??
+                      data['access_token']?.toString() ??
+                      (data['data'] is Map<String, dynamic>
+                          ? data['data']['accessToken']?.toString() ??
+                              data['data']['token']?.toString()
+                          : null);
+                }
+
+                if (newAccessToken != null && newAccessToken.isNotEmpty) {
+                  await _tokenStorage.saveTokens(newAccessToken, refreshToken);
+
+                  final options = error.requestOptions;
+                  options.headers['Authorization'] = 'Bearer $newAccessToken';
+                  options.extra['isRetry'] = true;
+
+                  final retryResponse = await _dio.fetch(options);
+                  return handler.resolve(retryResponse);
+                }
+              }
+            } catch (e) {
+              if (kDebugMode) {
+                debugPrint('Échec du rafraîchissement du token: $e');
+              }
+            }
+
+            await _tokenStorage.clearTokens();
+            _onLogout?.call();
+          }
+
           final customException = _parseDioError(error);
           if (kDebugMode) {
             debugPrint('<--- ERROR ${error.requestOptions.uri}');
