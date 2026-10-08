@@ -154,4 +154,69 @@ class AuthRepository {
       throw ApiException(message: e.toString());
     }
   }
+
+  /// Demande de réinitialisation de mot de passe
+  /// Fait un POST vers /auth/forgot-password avec l'email
+  Future<void> forgotPassword(String email) async {
+    try {
+      await _dioClient.dio.post(
+        '/auth/forgot-password',
+        data: {
+          'email': email,
+        },
+      );
+    } on DioException catch (e) {
+      if (e.error is ApiException) {
+        throw e.error as ApiException;
+      }
+      final backendMessage = e.response?.data is Map<String, dynamic>
+          ? e.response?.data['message']?.toString() ??
+              e.response?.data['error']?.toString()
+          : null;
+      throw ApiException(
+        message: backendMessage ??
+            e.message ??
+            'Erreur lors de la demande de réinitialisation du mot de passe.',
+        statusCode: e.response?.statusCode,
+        data: e.response?.data,
+      );
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException(message: e.toString());
+    }
+  }
+
+  /// Réinitialisation du mot de passe avec le token de réinitialisation
+  /// Fait un POST vers /auth/reset-password avec le token et le nouveau mot de passe
+  Future<void> resetPassword(String token, String nouveauMotDePasse) async {
+    try {
+      await _dioClient.dio.post(
+        '/auth/reset-password',
+        data: {
+          'token': token,
+          'nouveauMotDePasse': nouveauMotDePasse,
+          'password': nouveauMotDePasse,
+          'newPassword': nouveauMotDePasse,
+        },
+      );
+    } on DioException catch (e) {
+      if (e.error is ApiException) {
+        throw e.error as ApiException;
+      }
+      final backendMessage = e.response?.data is Map<String, dynamic>
+          ? e.response?.data['message']?.toString() ??
+              e.response?.data['error']?.toString()
+          : null;
+      throw ApiException(
+        message: backendMessage ??
+            e.message ??
+            'Erreur lors de la réinitialisation du mot de passe.',
+        statusCode: e.response?.statusCode,
+        data: e.response?.data,
+      );
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException(message: e.toString());
+    }
+  }
 }
