@@ -167,13 +167,12 @@ final List<SujetConcoursItem> _sujets = [
   // ACTIONS DU MENU
   // ============================================================
 
-  void _onVoirSujet(SujetConcoursItem sujet) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Voir : ${sujet.titre}'),
-      ),
-    );
-  }
+void _onVoirSujet(SujetConcoursItem sujet) {
+  Navigator.pushNamed(
+    context,
+    AppRoutes.sujetsGestion,
+  );
+}
 
   void _onTelechargerSujet(SujetConcoursItem sujet) {
     ScaffoldMessenger.of(context).showSnackBar(

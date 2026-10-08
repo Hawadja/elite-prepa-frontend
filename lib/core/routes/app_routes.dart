@@ -11,6 +11,7 @@ import '../../modules/ressources_pedagogiques/views/fiches_cours_view.dart';
 import '../../modules/ressources_pedagogiques/views/delete_fiche_view.dart';
 import '../../modules/ressources_pedagogiques/views/sujets_concours_view.dart';
 import '../../modules/ressources_pedagogiques/views/add_edit_sujet_view.dart';
+import '../../modules/ressources_pedagogiques/views/sujets_gestion_view.dart';
 
 class AppRoutes {
   static const String home = '/';
@@ -24,7 +25,8 @@ class AppRoutes {
   static const String deleteFiche = '/delete-fiche';
   static const String addFiche = '/add-fiche';
   static const String sujetsConcours = '/sujets-concours';
-  static const String addEditSujet = '/add_edit-sujet';
+  static const String addEditSujet = '/add-edit-sujet';
+  static const String sujetsGestion = '/sujets-gestion';
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
@@ -88,20 +90,25 @@ class AppRoutes {
           builder: (_) => const SujetsConcoursView(),
         );
 
-     case addEditSujet:
-  final args = settings.arguments as Map<String, String>?;
+      case sujetsGestion:
+        return MaterialPageRoute(
+          builder: (_) => const SujetsGestionView(),
+        );
 
-  return MaterialPageRoute(
-    builder: (_) => AddEditSujetView(
-      id: args?['id'],
-      titre: args?['titre'],
-      matiere: args?['matiere'],
-      description: args?['description'],
-      concours: args?['concours'],
-      anneeAcademique: args?['anneeAcademique'],
-      nomFichier: args?['nomFichier'],
-    ),
-  );
+      case addEditSujet:
+        final args = settings.arguments as Map<String, String?>?;
+
+        return MaterialPageRoute(
+          builder: (_) => AddEditSujetView(
+            id: args?['id'],
+            titre: args?['titre'],
+            matiere: args?['matiere'],
+            description: args?['description'],
+            concours: args?['concours'],
+            anneeAcademique: args?['anneeAcademique'],
+            nomFichier: args?['nomFichier'],
+          ),
+        );
 
       default:
         return MaterialPageRoute(
