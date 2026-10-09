@@ -262,7 +262,7 @@ appBar: AppBar(
                   onPressed: () {
                     Navigator.pushNamed(
                       context,
-                      AppRoutes.matieres,
+                      AppRoutes.toutesRessources,
                     );
                   },
                   style: ElevatedButton.styleFrom(

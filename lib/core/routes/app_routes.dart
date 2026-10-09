@@ -18,6 +18,7 @@ import '../../modules/ressources_pedagogiques/views/add_edit_corrige_view.dart';
 import '../../modules/ressources_pedagogiques/views/telecharger_corrige_view.dart';
 import '../../modules/ressources_pedagogiques/views/recherche_avancee_view.dart';
 import '../../modules/ressources_pedagogiques/views/corrige_detail_view.dart';
+import '../../modules/ressources_pedagogiques/views/toutes_ressources_view.dart';
 
 
 class AppRoutes {
@@ -40,6 +41,7 @@ class AppRoutes {
   static const String addEditCorrige = '/add-edit-corrige';
   static const String telechargerCorrige = '/telecharger-corrige';
   static const String rechercheAvancee = '/recherche-avancee';
+  static const String toutesRessources = '/toutes-ressources';
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
@@ -190,7 +192,10 @@ class AppRoutes {
           ),
         );
 
-
+      case toutesRessources:
+        return MaterialPageRoute(
+          builder: (_) => const ToutesRessourcesView(),
+        );
 
       default:
         return MaterialPageRoute(
