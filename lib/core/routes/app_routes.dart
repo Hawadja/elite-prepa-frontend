@@ -16,6 +16,8 @@ import '../../modules/ressources_pedagogiques/views/sujet_detail_view.dart';
 import '../../modules/ressources_pedagogiques/views/corriges_view.dart';
 import '../../modules/ressources_pedagogiques/views/add_edit_corrige_view.dart';
 import '../../modules/ressources_pedagogiques/views/telecharger_corrige_view.dart';
+import '../../modules/ressources_pedagogiques/views/recherche_avancee_view.dart';
+import '../../modules/ressources_pedagogiques/views/corrige_detail_view.dart';
 
 
 class AppRoutes {
@@ -37,6 +39,7 @@ class AppRoutes {
   static const String corrigeDetail = '/corrige-detail';
   static const String addEditCorrige = '/add-edit-corrige';
   static const String telechargerCorrige = '/telecharger-corrige';
+  static const String rechercheAvancee = '/recherche-avancee';
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
@@ -167,6 +170,25 @@ class AppRoutes {
           ),
         );
 
+      case rechercheAvancee:
+        return MaterialPageRoute(
+          builder: (_) => const RechercheAvanceeView(),
+        );
+
+      case corrigeDetail:
+        final args = settings.arguments as Map<String, dynamic>?;
+
+        return MaterialPageRoute(
+          builder: (_) => CorrigeDetailView(
+            id: args?['id']?.toString() ?? '',
+            titre: args?['titre']?.toString() ?? 'Corrigé sans titre',
+            sousTitre: args?['sousTitre']?.toString() ?? '',
+            matiere: args?['matiere']?.toString() ?? 'Matière non renseignée',
+            concours: args?['concours']?.toString() ?? '',
+            annee: args?['annee']?.toString() ?? '',
+            nomFichier: args?['nomFichier']?.toString(),
+          ),
+        );
 
 
 

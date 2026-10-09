@@ -4,6 +4,7 @@ import '../../../core/routes/app_routes.dart';
 import 'add_edit_fiche_view.dart';
 import 'delete_fiche_view.dart';
 import 'telecharger_corrige_view.dart';
+import 'fiche_detail_view.dart';
 
 class FicheItem {
   final String id;
@@ -855,8 +856,19 @@ final List<FicheItem> _fiches = [
   ) {
     switch (action) {
       case 'voir':
-        _showMessage(
-          'Ouverture de ${fiche.titre}',
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => FicheDetailView(
+              id: fiche.id,
+              titre: fiche.titre,
+              matiere: fiche.matiere,
+              description: fiche.description,
+              format: fiche.format,
+              taille: fiche.taille,
+              nomFichier: fiche.nomFichier,
+            ),
+          ),
         );
         break;
 

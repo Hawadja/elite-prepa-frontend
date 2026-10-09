@@ -173,6 +173,45 @@ appBar: AppBar(
                 ],
               ),
 
+                           const SizedBox(height: 20),
+
+              // ======================================================
+              // RECHERCHE AVANCÉE
+              // ======================================================
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    Navigator.pushNamed(
+                      context,
+                      AppRoutes.rechercheAvancee,
+                    );
+                  },
+                  icon: const Icon(
+                    Icons.manage_search,
+                    size: 22,
+                  ),
+                  label: const Text(
+                    'Recherche avancée',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor:
+                        RessourcesDashboardView.primaryColor,
+                    side: const BorderSide(
+                      color: RessourcesDashboardView.primaryColor,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                ),
+              ),
+
               const SizedBox(height: 20),
 
               // ======================================================
