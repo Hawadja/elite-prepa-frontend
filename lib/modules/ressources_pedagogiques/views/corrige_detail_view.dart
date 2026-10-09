@@ -116,7 +116,7 @@ return Scaffold(
                       ),
                       child: const Icon(
                         Icons.menu_book_outlined,
-                        color: accentColor,
+                        color: Color(0xFFF0A500),
                         size: 22,
                       ),
                     ),
@@ -339,7 +339,7 @@ Row(
 children: [
 Icon(
 icon,
-color: primaryColor,
+color: const Color(0xFFF0A500),
 size: 21,
 ),
 const SizedBox(width: 10),

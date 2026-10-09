@@ -163,6 +163,7 @@ appBar: AppBar(
                     title: 'Corrigés disponibles',
                     value: '19',
                     icon: Icons.check_circle_outline,
+                    iconColor: Color(0xFFF0A500),
                      onTap: () {
                     Navigator.pushNamed(
                       context,
@@ -349,12 +350,14 @@ class _StatCard extends StatelessWidget {
   final String value;
   final IconData icon;
   final VoidCallback? onTap;
+  final Color? iconColor;
 
   const _StatCard({
     required this.title,
     required this.value,
     required this.icon,
     this.onTap,
+    this.iconColor,
   });
 
   @override
@@ -381,7 +384,7 @@ class _StatCard extends StatelessWidget {
             Icon(
               icon,
               size: 22,
-              color: RessourcesDashboardView.accentColor,
+              color: iconColor ?? RessourcesDashboardView.accentColor,
             ),
 
             const SizedBox(width: 10),
@@ -464,7 +467,7 @@ class _ContentCard extends StatelessWidget {
               child: Icon(
                 icon,
                 size: 20,
-                color: RessourcesDashboardView.primaryColor,
+                color: const Color(0xFFF0A500),
               ),
             ),
 

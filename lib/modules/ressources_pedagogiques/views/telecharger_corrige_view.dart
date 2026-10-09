@@ -281,12 +281,12 @@ class _TelechargerCorrigeViewState
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: Colors.red.withValues(alpha: 0.1),
+                          color: const Color(0xFFF0A500).withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: const Icon(
                           Icons.picture_as_pdf,
-                          color: Colors.red,
+                          color: Color(0xFFF0A500),
                           size: 32,
                         ),
                       ),
@@ -385,7 +385,7 @@ class _TelechargerCorrigeViewState
         Icon(
           icon,
           size: 21,
-          color: const Color(0xFF1F3F6E),
+          color: const Color(0xFFF0A500),
         ),
 
         const SizedBox(width: 12),
