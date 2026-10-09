@@ -25,6 +25,7 @@ class _SujetDetailViewState extends State<SujetDetailView> {
   static const Color lightBg = Color(0xFFF6F8FB);
   static const Color accentBlue = Color(0xFF1B55A2);
   static const Color successGreen = Color(0xFF28A745);
+  static const Color accentColor = Color(0xFFF0A500);
 
   // Concours est le troisième onglet.
   int _currentIndex = 2;
@@ -217,7 +218,7 @@ class _SujetDetailViewState extends State<SujetDetailView> {
                           child: const Icon(
                             Icons.picture_as_pdf_outlined,
                             size: 20,
-                            color: accentBlue,
+                            color: accentColor,
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -493,7 +494,7 @@ class _SujetDetailViewState extends State<SujetDetailView> {
         selectedIndex: _currentIndex,
         onDestinationSelected: _onNavigationSelected,
         backgroundColor: isDark ? darkBg : Colors.white,
-        indicatorColor: accentBlue.withValues(alpha: 0.18),
+        indicatorColor: accentColor.withValues(alpha: 0.18),
         height: 68,
         destinations: const [
           NavigationDestination(
@@ -564,44 +565,44 @@ class _SujetDetailViewState extends State<SujetDetailView> {
   // ============================================================
 
   Widget _buildSmallActionButton({
-    required IconData icon,
-    required String label,
-    required Color bgColor,
-    required Color textColor,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: 10,
-          vertical: 6,
-        ),
-        decoration: BoxDecoration(
-          color: bgColor,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              icon,
-              size: 14,
+  required IconData icon,
+  required String label,
+  required Color bgColor,
+  required Color textColor,
+  required VoidCallback onTap,
+}) {
+  return InkWell(
+    onTap: onTap,
+    borderRadius: BorderRadius.circular(8),
+    child: Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 10,
+        vertical: 6,
+      ),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            icon,
+            size: 14,
+            color: const Color(0xFFF0A500),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
               color: textColor,
             ),
-            const SizedBox(width: 6),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                color: textColor,
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
-    );
-  }
+    ),
+  );
+}
 }

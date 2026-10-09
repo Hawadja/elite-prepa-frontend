@@ -848,7 +848,7 @@ void _onTelechargerSujet(SujetGestionItem sujet) {
                 tooltip: 'Actions',
                 icon: Icon(
                   Icons.more_vert,
-                  color: secondaryTextColor,
+                  color: Colors.black,
                 ),
                 onSelected: (value) {
                   switch (value) {
@@ -882,7 +882,7 @@ void _onTelechargerSujet(SujetGestionItem sujet) {
                           Icon(
                             Icons.visibility_outlined,
                             size: 19,
-                            color: Color.fromARGB(255, 27, 23, 23),
+                            color: Colors.black,
                           ),
                           SizedBox(width: 10),
                           Text('Voir'),
@@ -896,7 +896,7 @@ void _onTelechargerSujet(SujetGestionItem sujet) {
                           Icon(
                             Icons.file_download_outlined,
                             size: 19,
-                            color: Color.fromARGB(255, 27, 23, 23),
+                            color: Colors.black,
                           ),
                           SizedBox(width: 10),
                           Text('Télécharger'),
@@ -910,7 +910,7 @@ void _onTelechargerSujet(SujetGestionItem sujet) {
                           Icon(
                             Icons.share_outlined,
                             size: 19,
-                            color: Color.fromARGB(255, 27, 23, 23),
+                            color: Colors.black,
                           ),
                           SizedBox(width: 10),
                           Text('Partager'),
@@ -924,7 +924,7 @@ void _onTelechargerSujet(SujetGestionItem sujet) {
                           Icon(
                             Icons.edit_outlined,
                             size: 19,
-                            color: Color.fromARGB(255, 27, 23, 23),
+                            color: Colors.black,
                           ),
                           SizedBox(width: 10),
                           Text('Modifier'),

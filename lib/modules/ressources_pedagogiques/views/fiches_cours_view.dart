@@ -40,6 +40,7 @@ class _FichesCoursViewState extends State<FichesCoursView> {
   static const Color primaryColor = Color(0xFF1F3F6E);
   static const Color accentColor = Color(0xFFF0A500);
   static const Color lightBackground = Color(0xFFF5F5F5);
+  static const Color deleteRed = Color(0xFFD9534F);
 
   int _currentIndex = 1;
 
@@ -620,6 +621,7 @@ final List<FicheItem> _fiches = [
                             Icon(
                               Icons.visibility_outlined,
                               size: 19,
+                              color: Colors.black,
                             ),
                             SizedBox(width: 10),
                             Text('Voir'),
@@ -633,6 +635,7 @@ final List<FicheItem> _fiches = [
                             Icon(
                               Icons.file_download_outlined,
                               size: 19,
+                              color: Colors.black,
                             ),
                             SizedBox(width: 10),
                             Text('Télécharger'),
@@ -646,6 +649,7 @@ final List<FicheItem> _fiches = [
                             Icon(
                               Icons.share_outlined,
                               size: 19,
+                              color: Colors.black,
                             ),
                             SizedBox(width: 10),
                             Text('Partager'),
@@ -659,6 +663,7 @@ final List<FicheItem> _fiches = [
                             Icon(
                               Icons.edit_outlined,
                               size: 19,
+                              color: Colors.black,
                             ),
                             SizedBox(width: 10),
                             Text('Modifier'),
@@ -675,7 +680,12 @@ final List<FicheItem> _fiches = [
                               color: Colors.red,
                             ),
                             SizedBox(width: 10),
-                            Text('Supprimer'),
+                            Text(
+                              'Supprimer',
+                              style: TextStyle(
+                              color: deleteRed,
+                              )
+                            ),
                           ],
                         ),
                       ),
