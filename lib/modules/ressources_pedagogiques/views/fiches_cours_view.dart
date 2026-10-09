@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../../../core/routes/app_routes.dart';
 import 'add_edit_fiche_view.dart';
-import 'delete_fiche_view.dart';
 import 'telecharger_corrige_view.dart';
 import 'fiche_detail_view.dart';
 
@@ -604,64 +603,87 @@ final List<FicheItem> _fiches = [
                 ),
 
                 PopupMenuButton<String>(
+                  tooltip: 'Actions',
                   icon: Icon(
                     Icons.more_vert,
                     color: secondaryTextColor,
                   ),
                   onSelected: (value) {
-                    _handleFicheAction(
-                      value,
-                      fiche,
-                    );
+                    _handleFicheAction(value, fiche);
                   },
-                  itemBuilder: (_) => const [
-                    PopupMenuItem(
-                      value: 'voir',
-                      child: ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        leading:
-                            Icon(Icons.visibility_outlined),
-                        title: Text('Voir'),
+                  itemBuilder: (context) {
+                    return const [
+                      PopupMenuItem<String>(
+                        value: 'voir',
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.visibility_outlined,
+                              size: 19,
+                            ),
+                            SizedBox(width: 10),
+                            Text('Voir'),
+                          ],
+                        ),
                       ),
-                    ),
-                    PopupMenuItem(
-                      value: 'telecharger',
-                      child: ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        leading:
-                            Icon(Icons.download_outlined),
-                        title: Text('Télécharger'),
+                      PopupMenuItem<String>(
+                        value: 'telecharger',
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.file_download_outlined,
+                              size: 19,
+                            ),
+                            SizedBox(width: 10),
+                            Text('Télécharger'),
+                          ],
+                        ),
                       ),
-                    ),
-                    PopupMenuItem(
-                      value: 'modifier',
-                      child: ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        leading:
-                            Icon(Icons.edit_outlined),
-                        title: Text('Modifier'),
+                      PopupMenuItem<String>(
+                        value: 'partager',
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.share_outlined,
+                              size: 19,
+                            ),
+                            SizedBox(width: 10),
+                            Text('Partager'),
+                          ],
+                        ),
                       ),
-                    ),
-                    PopupMenuItem(
-                      value: 'supprimer',
-                      child: ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        leading:
-                            Icon(Icons.delete_outline),
-                        title: Text('Supprimer'),
+                      PopupMenuItem<String>(
+                        value: 'modifier',
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.edit_outlined,
+                              size: 19,
+                            ),
+                            SizedBox(width: 10),
+                            Text('Modifier'),
+                          ],
+                        ),
                       ),
-                    ),
-                    PopupMenuItem(
-                      value: 'partager',
-                      child: ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        leading:
-                            Icon(Icons.share_outlined),
-                        title: Text('Partager'),
+                      PopupMenuItem<String>(
+                        value: 'supprimer',
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.delete_outline,
+                              size: 19,
+                              color: Colors.red,
+                            ),
+                            SizedBox(width: 10),
+                            Text('Supprimer'),
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
+                    ];
+                  },
                 ),
+
+
               ],
             ),
 
@@ -913,25 +935,79 @@ final List<FicheItem> _fiches = [
   }
 }
 
-
 Future<void> _onDeleteFiche(FicheItem fiche) async {
-  final result = await Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (_) => DeleteFicheView(
-        fiche: fiche,
-      ),
-    ),
+  final isDark =
+      Theme.of(context).brightness == Brightness.dark;
+
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (dialogContext) {
+      return AlertDialog(
+        backgroundColor: isDark
+            ? const Color(0xFF102542)
+            : Colors.white,
+        title: Text(
+          'Supprimer la fiche ?',
+          style: TextStyle(
+            color: isDark ? Colors.white : Colors.black87,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: Text(
+          'Voulez-vous vraiment supprimer '
+          '« ${fiche.titre} » ?',
+          style: TextStyle(
+            color: isDark ? Colors.white70 : Colors.black54,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(dialogContext, false);
+            },
+            child: Text(
+              'Annuler',
+              style: TextStyle(
+                color: isDark
+                    ? Colors.white70
+                    : primaryColor,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(dialogContext, true);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+              elevation: 0,
+            ),
+            child: const Text('Supprimer'),
+          ),
+        ],
+      );
+    },
   );
 
-  if (result == true && mounted) {
-    setState(() {
-      _fiches.removeWhere(
-        (item) => item.id == fiche.id,
-      );
-    });
-  }
+  if (confirmed != true || !mounted) return;
+
+  setState(() {
+    _fiches.removeWhere(
+      (item) => item.id == fiche.id,
+    );
+  });
+
+  ScaffoldMessenger.of(context).showSnackBar(
+    const SnackBar(
+      content: Text('Fiche supprimée avec succès'),
+      backgroundColor: Colors.green,
+      behavior: SnackBarBehavior.floating,
+    ),
+  );
 }
+
+
   void _showMessage(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(

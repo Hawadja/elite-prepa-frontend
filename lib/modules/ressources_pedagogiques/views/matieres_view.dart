@@ -394,26 +394,85 @@ class _MatiereCard extends StatelessWidget {
                   // ----------------------------------------------------
                   // SUPPRIMER
                   // ----------------------------------------------------
-                  IconButton(
-                    tooltip: 'Supprimer',
-                    visualDensity: VisualDensity.compact,
-                    icon: const Icon(
-                      Icons.delete_outline,
-                      size: 20,
-                    ),
-                    color: Colors.red,
-                    onPressed: () async {
-                      final result = await Navigator.pushNamed(
-                        context,
-                        AppRoutes.deleteMatiere,
-                        arguments: matiere,
-                      );
 
-                      if (result == true && context.mounted) {
-                        onChanged();
-                      }
-                    },
+                IconButton(
+                  tooltip: 'Supprimer',
+                  visualDensity: VisualDensity.compact,
+                  icon: const Icon(
+                    Icons.delete_outline,
+                    size: 20,
                   ),
+                  color: Colors.red,
+                  onPressed: () async {
+                    final isDark =
+                        Theme.of(context).brightness == Brightness.dark;
+
+                    final confirmed = await showDialog<bool>(
+                      context: context,
+                      builder: (dialogContext) {
+                        return AlertDialog(
+                          backgroundColor: isDark
+                              ? const Color(0xFF102542)
+                              : Colors.white,
+                          title: Text(
+                            'Supprimer la matière ?',
+                            style: TextStyle(
+                              color: isDark ? Colors.white : Colors.black87,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          content: Text(
+                            'Voulez-vous vraiment supprimer '
+                            '« ${matiere.nom} » ?',
+                            style: TextStyle(
+                              color: isDark ? Colors.white70 : Colors.black54,
+                            ),
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () {
+                                Navigator.pop(dialogContext, false);
+                              },
+                              child: Text(
+                                'Annuler',
+                                style: TextStyle(
+                                  color: isDark
+                                      ? Colors.white70
+                                      : const Color(0xFF1F3F6E),
+                                ),
+                              ),
+                            ),
+                            ElevatedButton(
+                              onPressed: () {
+                                Navigator.pop(dialogContext, true);
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.red,
+                                foregroundColor: Colors.white,
+                                elevation: 0,
+                              ),
+                              child: const Text('Supprimer'),
+                            ),
+                          ],
+                        );
+                      },
+                    );
+
+                    if (confirmed != true || !context.mounted) {
+                      return;
+                    }
+
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Matière supprimée avec succès'),
+                        backgroundColor: Colors.green,
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+
+                    onChanged();
+                  },
+                ),
                 ],
               ),
             ],
