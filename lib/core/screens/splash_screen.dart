@@ -34,7 +34,7 @@ class _SplashScreenState extends State<SplashScreen> {
           children: [
             // Logo Elite Prépa
             Image.asset(
-              'assets/images/logo_elite_prepa.png',
+              'assets/images/elite-prepa-logo.png',
               width: 180,
               height: 180,
               fit: BoxFit.contain,

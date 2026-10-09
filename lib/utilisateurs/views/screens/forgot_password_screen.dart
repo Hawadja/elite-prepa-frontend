@@ -97,18 +97,26 @@ class _ForgotPasswordViewState extends State<_ForgotPasswordView> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Center(
-                      child: Container(
-                        padding: const EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          color: navyColor.withValues(alpha: 0.08),
-                          shape: BoxShape.circle,
-                          border: Border.all(color: goldColor, width: 2),
-                        ),
-                        child: const Icon(
-                          Icons.lock_reset_rounded,
-                          size: 56,
-                          color: navyColor,
-                        ),
+                      child: Image.asset(
+                        'assets/images/elite-prepa-icon.png',
+                        width: 90,
+                        height: 90,
+                        fit: BoxFit.contain,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Container(
+                            padding: const EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                              color: navyColor.withValues(alpha: 0.08),
+                              shape: BoxShape.circle,
+                              border: Border.all(color: goldColor, width: 2),
+                            ),
+                            child: const Icon(
+                              Icons.lock_reset_rounded,
+                              size: 56,
+                              color: navyColor,
+                            ),
+                          );
+                        },
                       ),
                     ),
                     const SizedBox(height: 24),

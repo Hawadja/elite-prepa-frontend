@@ -19,12 +19,21 @@ class AppRouter {
     initialLocation: '/splash',
     refreshListenable: AuthNotifier.instance,
     redirect: (BuildContext context, GoRouterState state) async {
-      final token = await _tokenStorage.getAccessToken();
-      final hasToken = token != null && token.isNotEmpty;
       final location = state.matchedLocation;
 
+      if (location == '/splash') {
+        await Future.delayed(const Duration(milliseconds: 1500));
+      }
+
+      final token = await _tokenStorage.getAccessToken();
+      final hasToken = token != null && token.isNotEmpty;
+
+      // Traitement prioritaire pour /splash
+      if (location == '/splash') {
+        return hasToken ? '/home' : '/login';
+      }
+
       final unauthRoutes = [
-        '/splash',
         '/login',
         '/register',
         '/otp',
