@@ -9,6 +9,7 @@ import '../../utilisateurs/views/screens/otp_screen.dart';
 import '../../utilisateurs/views/screens/profil_screen.dart';
 import '../../utilisateurs/views/screens/register_screen.dart';
 import '../../utilisateurs/views/screens/reset_password_screen.dart';
+import '../screens/splash_screen.dart';
 import '../storage/token_storage.dart';
 
 class AppRouter {
@@ -89,65 +90,7 @@ class AppRouter {
   );
 }
 
-class SplashScreen extends StatefulWidget {
-  const SplashScreen({super.key});
 
-  @override
-  State<SplashScreen> createState() => _SplashScreenState();
-}
-
-class _SplashScreenState extends State<SplashScreen> {
-  @override
-  void initState() {
-    super.initState();
-    Future.microtask(() {
-      if (mounted) {
-        context.read<AuthCubit>().checkAuthStatus();
-      }
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    const navyColor = Color(0xFF1F3F6E);
-    const goldColor = Color(0xFFF0A500);
-
-    return Scaffold(
-      backgroundColor: navyColor,
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.1),
-                shape: BoxShape.circle,
-                border: Border.all(color: goldColor, width: 2),
-              ),
-              child: const Icon(
-                Icons.school_rounded,
-                size: 64,
-                color: goldColor,
-              ),
-            ),
-            const SizedBox(height: 24),
-            const Text(
-              'Elite Prépa',
-              style: TextStyle(
-                fontSize: 32,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
-            const SizedBox(height: 32),
-            const CircularProgressIndicator(color: goldColor),
-          ],
-        ),
-      ),
-    );
-  }
-}
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
