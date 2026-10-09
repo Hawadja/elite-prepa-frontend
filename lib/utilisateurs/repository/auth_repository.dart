@@ -1,10 +1,19 @@
 import 'package:dio/dio.dart';
 import '../../core/errors/app_exception.dart';
 import '../../core/network/dio_client.dart';
+import '../../core/storage/token_storage.dart';
 import '../models/auth_response.dart';
 import '../models/user_model.dart';
 
-import '../../core/storage/token_storage.dart';
+class AuthTokens {
+  final String accessToken;
+  final String? refreshToken;
+
+  const AuthTokens({
+    required this.accessToken,
+    this.refreshToken,
+  });
+}
 
 class AuthRepository {
   final DioClient _dioClient;
@@ -19,12 +28,11 @@ class AuthRepository {
     await _tokenStorage.clearTokens();
   }
 
-  /// Inscription d'un nouvel utilisateur
-  /// Fait un POST vers /auth/register et retourne l'utilisateur créé ou lève une ApiException
+  /// Inscription d'un nouvel utilisateur (POST /users/create)
   Future<UserModel> register(UserModel user, String motDePasse) async {
     try {
       final response = await _dioClient.dio.post(
-        '/auth/register',
+        '/users/create',
         data: {
           'nom': user.nom,
           'prenom': user.prenom,
@@ -46,12 +54,11 @@ class AuthRepository {
           }
           return UserModel.fromJson(innerData);
         }
+        // If backend returns only message or basic user data
         return UserModel.fromJson(data);
       }
 
-      throw const ApiException(
-        message: 'Format de réponse backend invalide.',
-      );
+      return user;
     } on DioException catch (e) {
       if (e.error is ApiException) {
         throw e.error as ApiException;
@@ -73,12 +80,11 @@ class AuthRepository {
     }
   }
 
-  /// Vérification du code OTP envoyé par email
-  /// Fait un POST vers /auth/verify-otp et retourne le token JWT (String)
-  Future<String> verifyOtp(String email, String code) async {
+  /// Vérification du code OTP envoyé par email (POST /otp/verify)
+  Future<AuthTokens> verifyOtp(String email, String code) async {
     try {
       final response = await _dioClient.dio.post(
-        '/auth/verify-otp',
+        '/otp/verify',
         data: {
           'email': email,
           'code': code,
@@ -87,14 +93,24 @@ class AuthRepository {
 
       final data = response.data;
       if (data is Map<String, dynamic>) {
-        final token = data['token'] ??
-            data['accessToken'] ??
+        final accessToken = data['accessToken'] ??
+            data['token'] ??
+            data['access_token'] ??
             (data['data'] is Map<String, dynamic>
-                ? data['data']['token'] ?? data['data']['accessToken']
+                ? data['data']['accessToken'] ?? data['data']['token']
                 : null);
 
-        if (token != null && token.toString().isNotEmpty) {
-          return token.toString();
+        final refreshToken = data['refreshToken'] ??
+            data['refresh_token'] ??
+            (data['data'] is Map<String, dynamic>
+                ? data['data']['refreshToken'] ?? data['data']['refresh_token']
+                : null);
+
+        if (accessToken != null && accessToken.toString().isNotEmpty) {
+          return AuthTokens(
+            accessToken: accessToken.toString(),
+            refreshToken: refreshToken?.toString(),
+          );
         }
       }
 
@@ -122,8 +138,37 @@ class AuthRepository {
     }
   }
 
-  /// Connexion de l'utilisateur avec email et mot de passe
-  /// Fait un POST vers /auth/login et retourne un AuthResponse (UserModel + tokens)
+  /// Renvoi d'un nouveau code OTP (POST /otp/resend)
+  Future<void> resendOtp(String email) async {
+    try {
+      await _dioClient.dio.post(
+        '/otp/resend',
+        data: {
+          'email': email,
+        },
+      );
+    } on DioException catch (e) {
+      if (e.error is ApiException) {
+        throw e.error as ApiException;
+      }
+      final backendMessage = e.response?.data is Map<String, dynamic>
+          ? e.response?.data['message']?.toString() ??
+              e.response?.data['error']?.toString()
+          : null;
+      throw ApiException(
+        message: backendMessage ??
+            e.message ??
+            'Erreur lors de l\'envoi du nouveau code OTP.',
+        statusCode: e.response?.statusCode,
+        data: e.response?.data,
+      );
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException(message: e.toString());
+    }
+  }
+
+  /// Connexion de l'utilisateur avec email et mot de passe (POST /auth/login)
   Future<AuthResponse> login(String email, String motDePasse) async {
     try {
       final response = await _dioClient.dio.post(
@@ -131,7 +176,6 @@ class AuthRepository {
         data: {
           'email': email,
           'motDePasse': motDePasse,
-          'password': motDePasse,
         },
       );
 
@@ -164,12 +208,11 @@ class AuthRepository {
     }
   }
 
-  /// Demande de réinitialisation de mot de passe
-  /// Fait un POST vers /auth/forgot-password avec l'email
+  /// Demande de réinitialisation de mot de passe (POST /auth/forgot_password)
   Future<void> forgotPassword(String email) async {
     try {
       await _dioClient.dio.post(
-        '/auth/forgot-password',
+        '/auth/forgot_password',
         data: {
           'email': email,
         },
@@ -195,17 +238,16 @@ class AuthRepository {
     }
   }
 
-  /// Réinitialisation du mot de passe avec le token de réinitialisation
-  /// Fait un POST vers /auth/reset-password avec le token et le nouveau mot de passe
-  Future<void> resetPassword(String token, String nouveauMotDePasse) async {
+  /// Réinitialisation du mot de passe (POST /auth/reset_password)
+  Future<void> resetPassword(String tokenOrCode, String nouveauMotDePasse,
+      {String? email}) async {
     try {
       await _dioClient.dio.post(
-        '/auth/reset-password',
+        '/auth/reset_password',
         data: {
-          'token': token,
+          if (email != null && email.isNotEmpty) 'email': email,
+          'code': tokenOrCode,
           'nouveauMotDePasse': nouveauMotDePasse,
-          'password': nouveauMotDePasse,
-          'newPassword': nouveauMotDePasse,
         },
       );
     } on DioException catch (e) {
@@ -229,15 +271,13 @@ class AuthRepository {
     }
   }
 
-  /// Renouvellement de l'access token avec un refresh token
-  /// Fait un POST vers /auth/refresh et retourne le nouveau access token (String)
+  /// Renouvellement de l'access token avec un refresh token (POST /auth/refresh)
   Future<String> refreshToken(String refreshToken) async {
     try {
       final response = await _dioClient.dio.post(
         '/auth/refresh',
         data: {
           'refreshToken': refreshToken,
-          'refresh_token': refreshToken,
         },
       );
 
@@ -279,3 +319,4 @@ class AuthRepository {
     }
   }
 }
+

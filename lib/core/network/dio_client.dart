@@ -3,7 +3,7 @@ import 'package:flutter/foundation.dart';
 import '../errors/app_exception.dart';
 import '../storage/token_storage.dart';
 
-const String apiBaseUrl = 'https://api.eliteprepa.com/api';
+const String apiBaseUrl = 'http://10.147.86.32:3000/api/v1';
 
 class DioClient {
   late final Dio _dio;
@@ -58,7 +58,10 @@ class DioClient {
           final path = error.requestOptions.path;
           final isAuthEndpoint = path.contains('/auth/login') ||
               path.contains('/auth/refresh') ||
-              path.contains('/auth/register');
+              path.contains('/auth/forgot_password') ||
+              path.contains('/auth/reset_password') ||
+              path.contains('/users/create') ||
+              path.contains('/otp/verify');
           final isRetry = error.requestOptions.extra['isRetry'] == true;
 
           if (error.response?.statusCode == 401 && !isAuthEndpoint && !isRetry) {
@@ -71,7 +74,6 @@ class DioClient {
                   '/auth/refresh',
                   data: {
                     'refreshToken': refreshToken,
-                    'refresh_token': refreshToken,
                   },
                 );
 

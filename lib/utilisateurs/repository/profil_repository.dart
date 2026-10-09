@@ -9,11 +9,10 @@ class ProfilRepository {
   ProfilRepository({DioClient? dioClient})
       : _dioClient = dioClient ?? DioClient();
 
-  /// Récupère le profil d'un utilisateur par son ID
-  /// Fait un GET vers /profil/:id et retourne un ProfilModel
+  /// Récupère le profil d'un utilisateur par son ID (GET /profil/get/:userId)
   Future<ProfilModel> getProfil(String userId) async {
     try {
-      final response = await _dioClient.dio.get('/profil/$userId');
+      final response = await _dioClient.dio.get('/profil/get/$userId');
 
       final data = response.data;
       if (data is Map<String, dynamic>) {
@@ -55,12 +54,11 @@ class ProfilRepository {
     }
   }
 
-  /// Met à jour le profil d'un utilisateur par son ID
-  /// Fait un PUT vers /profil/:id et retourne le ProfilModel mis à jour
+  /// Met à jour le profil d'un utilisateur par son ID (PATCH /profil/update/:userId)
   Future<ProfilModel> updateProfil(String userId, ProfilModel profil) async {
     try {
-      final response = await _dioClient.dio.put(
-        '/profil/$userId',
+      final response = await _dioClient.dio.patch(
+        '/profil/update/$userId',
         data: profil.toJson(),
       );
 
