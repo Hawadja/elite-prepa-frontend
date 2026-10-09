@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/routes/app_routes.dart';
+import 'telecharger_corrige_view.dart';
 
 // ============================================================
 // MODÈLE TEMPORAIRE — CORRIGÉ
@@ -164,36 +165,51 @@ class _CorrigesViewState extends State<CorrigesView> {
   // VOIR
   // ============================================================
 
-  void _onVoirCorrige(CorrigeItem corrige) {
-    Navigator.pushNamed(
-      context,
-      AppRoutes.corrigeDetail,
-      arguments: {
-        'id': corrige.id,
-        'titre': corrige.titre,
-        'sousTitre': corrige.sousTitre,
-        'matiere': corrige.matiere,
-        'concours': corrige.concours,
-        'annee': corrige.annee,
-        'nomFichier': corrige.nomFichier,
-      },
-    );
-  }
+void _onVoirCorrige(CorrigeItem corrige) {
+  Navigator.pushNamed(
+    context,
+    AppRoutes.corrigeDetail,
+    arguments: {
+      'id': corrige.id,
+      'titre': corrige.titre,
+      'sousTitre': corrige.sousTitre,
+      'matiere': corrige.matiere,
+      'concours': corrige.concours,
+      'annee': corrige.annee,
+      'nomFichier': corrige.nomFichier,
+      'type': 'corrige',
+    },
+  );
+}
+
+
 
   // ============================================================
   // TÉLÉCHARGER
   // ============================================================
 
-  void _onTelechargerCorrige(CorrigeItem corrige) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Téléchargement de : ${corrige.nomFichier}',
-        ),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-  }
+
+
+void _onTelechargerCorrige(CorrigeItem corrige) {
+  Navigator.pushNamed(
+    context,
+    AppRoutes.telechargerCorrige,
+    arguments: {
+      'id': corrige.id,
+      'titre': corrige.titre,
+      'sousTitre': corrige.sousTitre,
+      'matiere': corrige.matiere,
+      'concours': corrige.concours,
+      'annee': corrige.annee,
+      'nomFichier': corrige.nomFichier,
+      'type': 'corrige',
+    },
+  );
+}
+
+
+
+
 
   // ============================================================
   // PARTAGER
@@ -214,16 +230,28 @@ class _CorrigesViewState extends State<CorrigesView> {
   // MODIFIER
   // ============================================================
 
-  void _onModifierCorrige(CorrigeItem corrige) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Modification de : ${corrige.titre}',
-        ),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-  }
+
+void _onModifierCorrige(CorrigeItem corrige) {
+  Navigator.pushNamed(
+    context,
+    AppRoutes.addEditCorrige,
+    arguments: {
+      'id': corrige.id,
+      'titre': corrige.titre,
+      'sousTitre': corrige.sousTitre,
+      'matiere': corrige.matiere,
+      'concours': corrige.concours,
+      'annee': corrige.annee,
+      'nomFichier': corrige.nomFichier,
+    },
+  ).then((result) {
+    if (result == true && mounted) {
+      setState(() {});
+    }
+  });
+}
+
+
 
   // ============================================================
   // SUPPRIMER
@@ -424,17 +452,12 @@ class _CorrigesViewState extends State<CorrigesView> {
               size: 26,
             ),
             tooltip: 'Ajouter un corrigé',
-            onPressed: () {
-              // Écran d'ajout à créer ensuite
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text(
-                    'Ajout d’un corrigé',
-                  ),
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
-            },
+              onPressed: () {
+                Navigator.pushNamed(
+                  context,
+                  AppRoutes.addEditCorrige,
+                );
+              },
           ),
           const SizedBox(width: 6),
         ],

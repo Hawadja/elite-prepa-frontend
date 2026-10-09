@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../core/routes/app_routes.dart';
 import 'add_edit_fiche_view.dart';
 import 'delete_fiche_view.dart';
+import 'telecharger_corrige_view.dart';
 
 class FicheItem {
   final String id;
@@ -860,9 +861,7 @@ final List<FicheItem> _fiches = [
         break;
 
       case 'telecharger':
-        _showMessage(
-          'Téléchargement de ${fiche.titre}',
-        );
+        _onTelechargerFiche(fiche);
         break;
 
       case 'modifier':
@@ -929,4 +928,25 @@ Future<void> _onDeleteFiche(FicheItem fiche) async {
       ),
     );
   }
+
+
+void _onTelechargerFiche(FicheItem fiche) {
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (_) => TelechargerCorrigeView(
+        id: fiche.id,
+        titre: fiche.titre,
+        sousTitre: fiche.description,
+        matiere: fiche.matiere,
+        concours: null,
+        annee: null,
+        nomFichier: fiche.nomFichier,
+        type: 'fiche',
+      ),
+    ),
+  );
+}
+
+
 }

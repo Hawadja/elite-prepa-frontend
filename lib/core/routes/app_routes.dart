@@ -14,6 +14,9 @@ import '../../modules/ressources_pedagogiques/views/add_edit_sujet_view.dart';
 import '../../modules/ressources_pedagogiques/views/sujets_gestion_view.dart';
 import '../../modules/ressources_pedagogiques/views/sujet_detail_view.dart';
 import '../../modules/ressources_pedagogiques/views/corriges_view.dart';
+import '../../modules/ressources_pedagogiques/views/add_edit_corrige_view.dart';
+import '../../modules/ressources_pedagogiques/views/telecharger_corrige_view.dart';
+
 
 class AppRoutes {
   static const String home = '/';
@@ -32,6 +35,8 @@ class AppRoutes {
   static const String sujetDetail = '/sujet-detail';
   static const String corriges = '/corriges';
   static const String corrigeDetail = '/corrige-detail';
+  static const String addEditCorrige = '/add-edit-corrige';
+  static const String telechargerCorrige = '/telecharger-corrige';
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
@@ -126,6 +131,44 @@ class AppRoutes {
         return MaterialPageRoute(
           builder: (_) => const CorrigesView(),
         );
+
+
+      case addEditCorrige:
+        final args =
+            settings.arguments as Map<String, String?>?;
+
+        return MaterialPageRoute(
+          builder: (_) => AddEditCorrigeView(
+            id: args?['id'],
+            titre: args?['titre'],
+            sousTitre: args?['sousTitre'],
+            matiere: args?['matiere'],
+            concours: args?['concours'],
+            annee: args?['annee'],
+            nomFichier: args?['nomFichier'],
+          ),
+        );
+
+
+      case telechargerCorrige:
+        final args =
+            settings.arguments as Map<String, String?>?;
+
+        return MaterialPageRoute(
+          builder: (_) => TelechargerCorrigeView(
+            id: args?['id'],
+            titre: args?['titre'],
+            sousTitre: args?['sousTitre'],
+            matiere: args?['matiere'],
+            concours: args?['concours'],
+            annee: args?['annee'],
+            nomFichier: args?['nomFichier'],
+            type: args?['type'] ?? 'corrige',
+          ),
+        );
+
+
+
 
       default:
         return MaterialPageRoute(
