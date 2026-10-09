@@ -845,7 +845,7 @@ void _onModifierCorrige(CorrigeItem corrige) {
                 ),
                 child: const Icon(
                   Icons.picture_as_pdf_outlined,
-                  color: primaryColor,
+                  color: Color(0xFFF0A500),
                   size: 22,
                 ),
               ),
@@ -1116,7 +1116,7 @@ void _onModifierCorrige(CorrigeItem corrige) {
           Icon(
             icon,
             size: 14,
-            color: primaryColor,
+            color: const Color(0xFFF0A500),
           ),
           const SizedBox(width: 5),
           Text(

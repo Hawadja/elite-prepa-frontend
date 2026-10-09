@@ -489,7 +489,7 @@ void _onTelechargerSujet(SujetGestionItem sujet) {
                           Icon(
                             Icons.search,
                             size: 20,
-                            color: secondaryTextColor,
+                            color: accentColor,
                           ),
 
                           const SizedBox(width: 8),
@@ -882,6 +882,7 @@ void _onTelechargerSujet(SujetGestionItem sujet) {
                           Icon(
                             Icons.visibility_outlined,
                             size: 19,
+                            color: Color.fromARGB(255, 27, 23, 23),
                           ),
                           SizedBox(width: 10),
                           Text('Voir'),
@@ -895,6 +896,7 @@ void _onTelechargerSujet(SujetGestionItem sujet) {
                           Icon(
                             Icons.file_download_outlined,
                             size: 19,
+                            color: Color.fromARGB(255, 27, 23, 23),
                           ),
                           SizedBox(width: 10),
                           Text('Télécharger'),
@@ -908,6 +910,7 @@ void _onTelechargerSujet(SujetGestionItem sujet) {
                           Icon(
                             Icons.share_outlined,
                             size: 19,
+                            color: Color.fromARGB(255, 27, 23, 23),
                           ),
                           SizedBox(width: 10),
                           Text('Partager'),
@@ -921,6 +924,7 @@ void _onTelechargerSujet(SujetGestionItem sujet) {
                           Icon(
                             Icons.edit_outlined,
                             size: 19,
+                            color: Color.fromARGB(255, 27, 23, 23),
                           ),
                           SizedBox(width: 10),
                           Text('Modifier'),
@@ -1075,7 +1079,7 @@ void _onTelechargerSujet(SujetGestionItem sujet) {
           Icon(
             icon,
             size: 14,
-            color: primaryColor,
+            color: accentColor,
           ),
           const SizedBox(width: 5),
           Text(

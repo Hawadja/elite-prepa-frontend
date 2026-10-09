@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/routes/app_routes.dart';
+import '../../../core/theme/app_colors.dart';
 import 'telecharger_corrige_view.dart';
 
 class SujetConcoursItem {
@@ -58,52 +59,47 @@ class _SujetsConcoursViewState extends State<SujetsConcoursView> {
   // DONNÉES DE DÉMONSTRATION
   // ============================================================
 
-final List<SujetConcoursItem> _sujets = [
-  const SujetConcoursItem(
-    id: '1',
-    titre: 'Mines-Ponts 2025 · Maths I',
-    matiere: 'Mathématiques',
-    description:
-        'Sujet de mathématiques du concours Mines-Ponts 2025.',
-    concours: 'Mines-Ponts',
-    anneeAcademique: '2024-2025',
-    nomFichier: 'mines_ponts_2025_maths_1.pdf',
-    filiere: 'MP',
-    duree: '4 h',
-    corrigeDisponible: true,
-    showActionsAdmin: false,
-  ),
-
-  const SujetConcoursItem(
-    id: '2',
-    titre: 'CentraleSupélec 2025 · Physique',
-    matiere: 'Physique',
-    description:
-        'Sujet de physique du concours CentraleSupélec 2025.',
-    concours: 'CentraleSupélec',
-    anneeAcademique: '2024-2025',
-    nomFichier: 'centrale_supelec_2025_physique.pdf',
-    filiere: 'PSI',
-    duree: '4 h',
-    corrigeDisponible: true,
-    showActionsAdmin: false,
-  ),
-
-  const SujetConcoursItem(
-    id: '3',
-    titre: 'CCINP 2024 · Informatique',
-    matiere: 'Informatique',
-    description:
-        'Sujet d’informatique du concours CCINP 2024.',
-    concours: 'CCINP',
-    anneeAcademique: '2023-2024',
-    nomFichier: 'ccinP_2024_informatique.pdf',
-    filiere: 'MP',
-    duree: '3 h',
-    corrigeDisponible: false,
-    showActionsAdmin: true,
-  ),
-];
+  final List<SujetConcoursItem> _sujets = [
+    const SujetConcoursItem(
+      id: '1',
+      titre: 'Mines-Ponts 2025 · Maths I',
+      matiere: 'Mathématiques',
+      description: 'Sujet de mathématiques du concours Mines-Ponts 2025.',
+      concours: 'Mines-Ponts',
+      anneeAcademique: '2024-2025',
+      nomFichier: 'mines_ponts_2025_maths_1.pdf',
+      filiere: 'MP',
+      duree: '4 h',
+      corrigeDisponible: true,
+      showActionsAdmin: false,
+    ),
+    const SujetConcoursItem(
+      id: '2',
+      titre: 'CentraleSupélec 2025 · Physique',
+      matiere: 'Physique',
+      description: 'Sujet de physique du concours CentraleSupélec 2025.',
+      concours: 'CentraleSupélec',
+      anneeAcademique: '2024-2025',
+      nomFichier: 'centrale_supelec_2025_physique.pdf',
+      filiere: 'PSI',
+      duree: '4 h',
+      corrigeDisponible: true,
+      showActionsAdmin: false,
+    ),
+    const SujetConcoursItem(
+      id: '3',
+      titre: 'CCINP 2024 · Informatique',
+      matiere: 'Informatique',
+      description: 'Sujet d’informatique du concours CCINP 2024.',
+      concours: 'CCINP',
+      anneeAcademique: '2023-2024',
+      nomFichier: 'ccinP_2024_informatique.pdf',
+      filiere: 'MP',
+      duree: '3 h',
+      corrigeDisponible: false,
+      showActionsAdmin: true,
+    ),
+  ];
 
   @override
   void dispose() {
@@ -175,7 +171,6 @@ final List<SujetConcoursItem> _sujets = [
     );
   }
 
-
   void _onTelechargerSujet(SujetConcoursItem sujet) {
     Navigator.push(
       context,
@@ -194,29 +189,25 @@ final List<SujetConcoursItem> _sujets = [
     );
   }
 
+  Future<void> _onModifierSujet(SujetConcoursItem sujet) async {
+    final result = await Navigator.pushNamed(
+      context,
+      AppRoutes.addEditSujet,
+      arguments: {
+        'id': sujet.id,
+        'titre': sujet.titre,
+        'matiere': sujet.matiere,
+        'description': sujet.description,
+        'concours': sujet.concours,
+        'anneeAcademique': sujet.anneeAcademique,
+        'nomFichier': sujet.nomFichier,
+      },
+    );
 
-
-Future<void> _onModifierSujet(
-  SujetConcoursItem sujet,
-) async {
-  final result = await Navigator.pushNamed(
-    context,
-    AppRoutes.addEditSujet,
-    arguments: {
-      'id': sujet.id,
-      'titre': sujet.titre,
-      'matiere': sujet.matiere,
-      'description': sujet.description,
-      'concours': sujet.concours,
-      'anneeAcademique': sujet.anneeAcademique,
-      'nomFichier': sujet.nomFichier,
-    },
-  );
-
-  if (result == true && mounted) {
-    setState(() {});
+    if (result == true && mounted) {
+      setState(() {});
+    }
   }
-}
 
   void _onSupprimerSujet(SujetConcoursItem sujet) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -257,8 +248,7 @@ Future<void> _onModifierSujet(
   }
 
   List<String> get _matieres {
-    final matieres =
-        _sujets.map((sujet) => sujet.matiere).toSet().toList();
+    final matieres = _sujets.map((sujet) => sujet.matiere).toSet().toList();
 
     matieres.sort();
 
@@ -274,17 +264,10 @@ Future<void> _onModifierSujet(
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    final backgroundColor =
-        isDark ? darkBackground : lightBackground;
-
-    final cardColor =
-        isDark ? const Color(0xFF102542) : Colors.white;
-
-    final textColor =
-        isDark ? Colors.white : Colors.black87;
-
-    final secondaryTextColor =
-        isDark ? Colors.white70 : Colors.black54;
+    final backgroundColor = isDark ? darkBackground : lightBackground;
+    final cardColor = isDark ? const Color(0xFF102542) : Colors.white;
+    final textColor = isDark ? Colors.white : Colors.black87;
+    final secondaryTextColor = isDark ? Colors.white70 : Colors.black54;
 
     final sujets = _filteredSujets;
 
@@ -301,16 +284,15 @@ Future<void> _onModifierSujet(
         elevation: 0,
         scrolledUnderElevation: 0,
         titleSpacing: 0,
-
         leading: IconButton(
           icon: const Icon(
             Icons.arrow_back_ios_new,
             size: 19,
+            color: Colors.white,
           ),
           onPressed: () => Navigator.pop(context),
           tooltip: 'Retour',
         ),
-
         title: const Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -330,14 +312,13 @@ Future<void> _onModifierSujet(
             ),
           ],
         ),
-
         actions: [
           IconButton(
             icon: const Icon(
               Icons.add,
               size: 25,
+              color: AppColors.icon,
             ),
-            color: accentColor,
             onPressed: _onAddSujet,
             tooltip: 'Ajouter un sujet',
           ),
@@ -354,12 +335,7 @@ Future<void> _onModifierSujet(
           children: [
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(
-                  20,
-                  16,
-                  20,
-                  24,
-                ),
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -371,9 +347,7 @@ Future<void> _onModifierSujet(
                         color: textColor,
                       ),
                     ),
-
                     const SizedBox(height: 4),
-
                     Text(
                       '${sujets.length} sujet${sujets.length > 1 ? 's' : ''} disponible${sujets.length > 1 ? 's' : ''}',
                       style: TextStyle(
@@ -381,7 +355,6 @@ Future<void> _onModifierSujet(
                         color: secondaryTextColor,
                       ),
                     ),
-
                     const SizedBox(height: 16),
 
                     // ==================================================
@@ -398,9 +371,7 @@ Future<void> _onModifierSujet(
                         color: cardColor,
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                          color: isDark
-                              ? Colors.white10
-                              : Colors.black12,
+                          color: isDark ? Colors.white10 : Colors.black12,
                         ),
                       ),
                       child: TextField(
@@ -413,10 +384,10 @@ Future<void> _onModifierSujet(
                           color: textColor,
                         ),
                         decoration: InputDecoration(
-                          icon: Icon(
+                          icon: const Icon(
                             Icons.search,
                             size: 20,
-                            color: secondaryTextColor,
+                            color: AppColors.icon,
                           ),
                           hintText: 'Rechercher un sujet...',
                           hintStyle: TextStyle(
@@ -424,19 +395,19 @@ Future<void> _onModifierSujet(
                             color: secondaryTextColor,
                           ),
                           border: InputBorder.none,
-                          suffixIcon:
-                              _searchController.text.isNotEmpty
-                                  ? IconButton(
-                                      icon: const Icon(
-                                        Icons.clear,
-                                        size: 19,
-                                      ),
-                                      onPressed: () {
-                                        _searchController.clear();
-                                        setState(() {});
-                                      },
-                                    )
-                                  : null,
+                          suffixIcon: _searchController.text.isNotEmpty
+                              ? IconButton(
+                                  icon: const Icon(
+                                    Icons.clear,
+                                    size: 19,
+                                    color: AppColors.icon,
+                                  ),
+                                  onPressed: () {
+                                    _searchController.clear();
+                                    setState(() {});
+                                  },
+                                )
+                              : null,
                         ),
                       ),
                     ),
@@ -454,23 +425,19 @@ Future<void> _onModifierSujet(
                           style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
-                            color: textColor,
+                            color: AppColors.icon,
                           ),
                         ),
                         const SizedBox(width: 8),
-
                         Expanded(
                           child: SingleChildScrollView(
                             scrollDirection: Axis.horizontal,
                             child: Row(
                               children: _matieres.map((matiere) {
-                                final selected =
-                                    _selectedMatiere == matiere;
+                                final selected = _selectedMatiere == matiere;
 
                                 return Padding(
-                                  padding: const EdgeInsets.only(
-                                    right: 8,
-                                  ),
+                                  padding: const EdgeInsets.only(right: 8),
                                   child: ChoiceChip(
                                     label: Text(matiere),
                                     selected: selected,
@@ -479,8 +446,7 @@ Future<void> _onModifierSujet(
                                         _selectedMatiere = matiere;
                                       });
                                     },
-                                    selectedColor:
-                                        accentColor.withValues(
+                                    selectedColor: accentColor.withValues(
                                       alpha: 0.20,
                                     ),
                                     labelStyle: TextStyle(
@@ -516,17 +482,14 @@ Future<void> _onModifierSujet(
                       _buildEmptyState(
                         cardColor: cardColor,
                         textColor: textColor,
-                        secondaryTextColor:
-                            secondaryTextColor,
+                        secondaryTextColor: secondaryTextColor,
                       )
                     else
                       ListView.separated(
                         shrinkWrap: true,
-                        physics:
-                            const NeverScrollableScrollPhysics(),
+                        physics: const NeverScrollableScrollPhysics(),
                         itemCount: sujets.length,
-                        separatorBuilder: (_, _) =>
-                            const SizedBox(height: 12),
+                        separatorBuilder: (_, _) => const SizedBox(height: 12),
                         itemBuilder: (context, index) {
                           final sujet = sujets[index];
 
@@ -534,8 +497,7 @@ Future<void> _onModifierSujet(
                             sujet: sujet,
                             cardColor: cardColor,
                             textColor: textColor,
-                            secondaryTextColor:
-                                secondaryTextColor,
+                            secondaryTextColor: secondaryTextColor,
                           );
                         },
                       ),
@@ -567,8 +529,7 @@ Future<void> _onModifierSujet(
                           foregroundColor: Colors.white,
                           elevation: 0,
                           shape: RoundedRectangleBorder(
-                            borderRadius:
-                                BorderRadius.circular(10),
+                            borderRadius: BorderRadius.circular(10),
                           ),
                         ),
                       ),
@@ -585,37 +546,55 @@ Future<void> _onModifierSujet(
       // NAVIGATION BOTTOM
       // ==========================================================
 
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _currentIndex,
-        onDestinationSelected: _onNavigationSelected,
-        backgroundColor:
-            isDark ? darkBackground : Colors.white,
-        indicatorColor: accentColor.withValues(
-          alpha: 0.18,
+      bottomNavigationBar: NavigationBarTheme(
+        data: NavigationBarThemeData(
+          iconTheme: const WidgetStatePropertyAll<IconThemeData>(
+            IconThemeData(
+              color: AppColors.icon,
+            ),
+          ),
+          indicatorColor: accentColor.withValues(alpha: 0.18),
+          labelTextStyle: WidgetStateProperty.resolveWith<TextStyle>(
+            (states) {
+              return TextStyle(
+                color: states.contains(WidgetState.selected)
+                    ? accentColor
+                    : (isDark ? Colors.white70 : Colors.black54),
+                fontWeight: states.contains(WidgetState.selected)
+                    ? FontWeight.w600
+                    : FontWeight.normal,
+              );
+            },
+          ),
         ),
-        height: 68,
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home),
-            label: 'Accueil',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.menu_book_outlined),
-            selectedIcon: Icon(Icons.menu_book),
-            label: 'Révisions',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.school_outlined),
-            selectedIcon: Icon(Icons.school),
-            label: 'Concours',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.person_outline),
-            selectedIcon: Icon(Icons.person),
-            label: 'Profil',
-          ),
-        ],
+        child: NavigationBar(
+          selectedIndex: _currentIndex,
+          onDestinationSelected: _onNavigationSelected,
+          backgroundColor: isDark ? darkBackground : Colors.white,
+          height: 68,
+          destinations: const [
+            NavigationDestination(
+              icon: Icon(Icons.home_outlined),
+              selectedIcon: Icon(Icons.home),
+              label: 'Accueil',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.menu_book_outlined),
+              selectedIcon: Icon(Icons.menu_book),
+              label: 'Révisions',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.school_outlined),
+              selectedIcon: Icon(Icons.school),
+              label: 'Concours',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.person_outline),
+              selectedIcon: Icon(Icons.person),
+              label: 'Profil',
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -662,7 +641,6 @@ Future<void> _onModifierSujet(
                   ),
                 ),
               ),
-
               if (sujet.showActionsAdmin)
                 PopupMenuButton<String>(
                   padding: EdgeInsets.zero,
@@ -670,10 +648,10 @@ Future<void> _onModifierSujet(
                     minWidth: 0,
                     minHeight: 0,
                   ),
-                  icon: Icon(
+                  icon: const Icon(
                     Icons.more_vert,
                     size: 22,
-                    color: secondaryTextColor,
+                    color: AppColors.icon,
                   ),
                   tooltip: 'Actions',
                   onSelected: (value) {
@@ -681,88 +659,85 @@ Future<void> _onModifierSujet(
                       case 'voir':
                         _onVoirSujet(sujet);
                         break;
-
                       case 'telecharger':
                         _onTelechargerSujet(sujet);
                         break;
-
                       case 'modifier':
                         _onModifierSujet(sujet);
                         break;
-
                       case 'supprimer':
                         _onSupprimerSujet(sujet);
                         break;
-
                       case 'partager':
                         _onPartagerSujet(sujet);
                         break;
                     }
                   },
-                  itemBuilder: (context) => const [
-                    PopupMenuItem<String>(
+                  itemBuilder: (context) => [
+                    const PopupMenuItem<String>(
                       value: 'voir',
                       child: Row(
                         children: [
                           Icon(
                             Icons.visibility_outlined,
                             size: 19,
+                            color: AppColors.icon,
                           ),
                           SizedBox(width: 10),
                           Text('Voir'),
                         ],
                       ),
                     ),
-
-                    PopupMenuItem<String>(
+                    const PopupMenuItem<String>(
                       value: 'telecharger',
                       child: Row(
                         children: [
                           Icon(
                             Icons.download_outlined,
                             size: 19,
+                            color: AppColors.icon,
                           ),
                           SizedBox(width: 10),
                           Text('Télécharger'),
                         ],
                       ),
                     ),
-
-                    PopupMenuItem<String>(
+                    const PopupMenuItem<String>(
                       value: 'modifier',
                       child: Row(
                         children: [
                           Icon(
                             Icons.edit_outlined,
                             size: 19,
+                            color: AppColors.icon,
                           ),
                           SizedBox(width: 10),
                           Text('Modifier'),
                         ],
                       ),
                     ),
-
-                    PopupMenuItem<String>(
+                    const PopupMenuItem<String>(
                       value: 'supprimer',
                       child: Row(
                         children: [
                           Icon(
                             Icons.delete_outline,
                             size: 19,
+                            color: Colors.red,
                           ),
                           SizedBox(width: 10),
                           Text('Supprimer'),
                         ],
                       ),
                     ),
-
-                    PopupMenuItem<String>(
+                    const PopupMenuItem<String>(
                       value: 'partager',
                       child: Row(
                         children: [
                           Icon(
                             Icons.share_outlined,
                             size: 19,
+                            color: AppColors.icon,
                           ),
                           SizedBox(width: 10),
                           Text('Partager'),
@@ -856,7 +831,7 @@ Future<void> _onModifierSujet(
         Icon(
           icon,
           size: 15,
-          color: textColor,
+          color: AppColors.icon,
         ),
         const SizedBox(width: 4),
         Text(
@@ -894,10 +869,10 @@ Future<void> _onModifierSujet(
       ),
       child: Column(
         children: [
-          Icon(
+          const Icon(
             Icons.search_off,
             size: 42,
-            color: secondaryTextColor,
+            color: AppColors.icon,
           ),
           const SizedBox(height: 12),
           Text(
@@ -922,3 +897,4 @@ Future<void> _onModifierSujet(
     );
   }
 }
+
