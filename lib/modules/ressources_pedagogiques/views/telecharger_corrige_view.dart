@@ -107,16 +107,31 @@ class _TelechargerCorrigeViewState
       backgroundColor: backgroundColor,
 
       appBar: AppBar(
-        title: Text(
-          'Télécharger $resourceName',
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-          ),
-        ),
         backgroundColor: primaryColor,
         foregroundColor: Colors.white,
         elevation: 0,
-      ),
+        surfaceTintColor: Colors.transparent,
+        shadowColor: Colors.transparent,
+        leading: IconButton(
+        tooltip: 'Retour',
+        icon: const Icon(
+        Icons.arrow_back_ios_new,
+        size: 19,
+        color: Color(0xFFF0A500),
+        ),
+        onPressed: () {
+        Navigator.pop(context);
+        },
+        ),
+        title: Text(
+        'Télécharger $resourceName',
+        style: const TextStyle(
+        fontSize: 20,
+        fontWeight: FontWeight.bold,
+        ),
+        ),
+        ),
+
 
       body: SafeArea(
         child: SingleChildScrollView(

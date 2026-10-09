@@ -179,7 +179,7 @@ class _MatieresViewState extends State<MatieresView> {
                           ),
                           itemCount: _filteredMatieres.length,
                           separatorBuilder: (_, _) =>
-                              const SizedBox(height: 10),
+                              const SizedBox(height: 7),
                           itemBuilder: (context, index) {
                             final matiere = _filteredMatieres[index];
 
@@ -298,15 +298,18 @@ class _MatiereCard extends StatelessWidget {
           );
         },
         child: Padding(
-          padding: const EdgeInsets.all(14),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 10,
+              vertical: 9,
+            ),
           child: Row(
             children: [
               // ========================================================
               // ICÔNE
               // ========================================================
               Container(
-                width: 46,
-                height: 46,
+                width: 38,
+                height: 38,
                 decoration: BoxDecoration(
                   color: const Color(0xFF1F3F6E).withValues(alpha: 0.10),
                   borderRadius: BorderRadius.circular(10),
@@ -315,11 +318,11 @@ class _MatiereCard extends StatelessWidget {
                 child: const Icon(
                   Icons.menu_book_outlined,
                   color: Color(0xFFF0A500),
-                  size: 24,
+                  size: 21,
                 ),
               ),
 
-              const SizedBox(width: 12),
+              const SizedBox(width: 9),
 
               // ========================================================
               // INFORMATIONS
@@ -345,7 +348,7 @@ class _MatiereCard extends StatelessWidget {
                       matiere.code,
                       style: const TextStyle(
                         color: Color(0xFFF0A500),
-                        fontSize: 12,
+                        fontSize: 11,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -357,14 +360,14 @@ class _MatiereCard extends StatelessWidget {
                       style: TextStyle(
                         color:
                             isDark ? Colors.white70 : Colors.black54,
-                        fontSize: 13,
+                        fontSize: 12,
                       ),
                     ),
                   ],
                 ),
               ),
 
-              const SizedBox(width: 8),
+              const SizedBox(width: 4),
 
               // ========================================================
               // ACTIONS
@@ -380,7 +383,7 @@ class _MatiereCard extends StatelessWidget {
                     visualDensity: VisualDensity.compact,
                     icon: const Icon(
                       Icons.edit_outlined,
-                      size: 20,
+                      size: 18,
                     ),
                     color: const Color(0xFF1F3F6E),
                     onPressed: () async {
@@ -405,7 +408,7 @@ class _MatiereCard extends StatelessWidget {
                   visualDensity: VisualDensity.compact,
                   icon: const Icon(
                     Icons.delete_outline,
-                    size: 20,
+                    size: 18,
                   ),
                   color: Colors.red,
                   onPressed: () async {
@@ -519,7 +522,7 @@ class _EmptyState extends StatelessWidget {
               style: TextStyle(
                 color:
                     isDark ? Colors.white : const Color(0xFF1F3F6E),
-                fontSize: 16,
+                fontSize: 15,
                 fontWeight: FontWeight.bold,
               ),
             ),

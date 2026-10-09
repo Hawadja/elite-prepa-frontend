@@ -4,6 +4,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/ressource_card_widget.dart';
 import '../models/matiere.dart';
 import '../../../core/routes/app_routes.dart';
+import 'add_edit_fiche_view.dart';
 
 class MatiereDetailView extends StatefulWidget {
   final Matiere matiere;
@@ -20,6 +21,107 @@ class MatiereDetailView extends StatefulWidget {
 class _MatiereDetailViewState extends State<MatiereDetailView> {
   int _selectedTabIndex = 0;
   int _currentIndex = 1;
+  static const Color accentColor = Color(0xFFF0A500);
+
+  // Ressources de démonstration affichées dans le détail d'une matière.
+final List<Map<String, String>> _ressources = [
+  {
+    'id': '1',
+    'titre': 'Limites et continuité',
+    'taille': '2,4 Mo',
+    'fichier': 'limites_continuite.pdf',
+  },
+  {
+    'id': '2',
+    'titre': 'Fonctions linéaires',
+    'taille': '1,8 Mo',
+    'fichier': 'fonctions_lineaires.pdf',
+  },
+  {
+    'id': '3',
+    'titre': 'Suites numériques',
+    'taille': '3,1 Mo',
+    'fichier': 'suites_numeriques.pdf',
+  },
+  {
+    'id': '4',
+    'titre': 'Intégrales',
+    'taille': '2,1 Mo',
+    'fichier': 'integrales.pdf',
+  },
+];
+
+Future<void> _modifierRessource(
+  Map<String, String> ressource,
+) async {
+  final result = await Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (_) => AddEditFicheView(
+        id: ressource['id'],
+        titre: ressource['titre'],
+        matiere: widget.matiere.nom,
+        nomFichier: ressource['fichier'],
+      ),
+    ),
+  );
+
+  if (result == true && mounted) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Formulaire de modification validé.',
+        ),
+      ),
+    );
+  }
+}
+
+Future<void> _supprimerRessource(
+  Map<String, String> ressource,
+) async {
+  final confirmation = await showDialog<bool>(
+    context: context,
+    builder: (dialogContext) => AlertDialog(
+      title: const Text('Supprimer la ressource'),
+      content: Text(
+        'Voulez-vous vraiment supprimer '
+        '"${ressource['titre']}" ?',
+      ),
+      actions: [
+        TextButton(
+          onPressed: () {
+            Navigator.pop(dialogContext, false);
+          },
+          child: const Text('Annuler'),
+        ),
+        TextButton(
+          onPressed: () {
+            Navigator.pop(dialogContext, true);
+          },
+          child: const Text(
+            'Supprimer',
+            style: TextStyle(color: Colors.red),
+          ),
+        ),
+      ],
+    ),
+  );
+
+  if (confirmation != true || !mounted) return;
+
+  setState(() {
+    _ressources.removeWhere(
+      (item) => item['id'] == ressource['id'],
+    );
+  });
+
+  ScaffoldMessenger.of(context).showSnackBar(
+    const SnackBar(
+      content: Text('Ressource supprimée de la liste.'),
+    ),
+  );
+}
 
   @override
   Widget build(BuildContext context) {
@@ -127,7 +229,7 @@ class _MatiereDetailViewState extends State<MatiereDetailView> {
                   color: isDark
                       ? Colors.white12
                       : Colors.grey.shade200,
-                  iconColor: AppColors.primaryBlue,
+                  iconColor: accentColor,
                   onTap: () async {
                     await Navigator.pushNamed(
                       context,
@@ -153,7 +255,7 @@ class _MatiereDetailViewState extends State<MatiereDetailView> {
                 _buildActionButton(
                   icon: Icons.add,
                   color: AppColors.primaryBlue,
-                  iconColor: Colors.white,
+                  iconColor: accentColor,
                   onTap: () {},
                 ),
               ],
@@ -337,6 +439,12 @@ class _MatiereDetailViewState extends State<MatiereDetailView> {
                   cardColor: cardColor,
                   textColor: textColor,
                   isDark: isDark,
+                  onModifier: () {
+                    _modifierRessource(_ressources[index]);
+                  },
+                  onSupprimer: () {
+                    _supprimerRessource(_ressources[index]);
+                  },
                 );
               },
             ),
