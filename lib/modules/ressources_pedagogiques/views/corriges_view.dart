@@ -2,7 +2,6 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/routes/app_routes.dart';
-import 'telecharger_corrige_view.dart';
 
 // ============================================================
 // MODÈLE TEMPORAIRE — CORRIGÉ

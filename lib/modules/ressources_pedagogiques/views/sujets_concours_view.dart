@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/routes/app_routes.dart';
+import 'telecharger_corrige_view.dart';
 
 class SujetConcoursItem {
   final String id;
@@ -167,20 +168,33 @@ final List<SujetConcoursItem> _sujets = [
   // ACTIONS DU MENU
   // ============================================================
 
-void _onVoirSujet(SujetConcoursItem sujet) {
-  Navigator.pushNamed(
-    context,
-    AppRoutes.sujetsGestion,
-  );
-}
+  void _onVoirSujet(SujetConcoursItem sujet) {
+    Navigator.pushNamed(
+      context,
+      AppRoutes.sujetsGestion,
+    );
+  }
+
 
   void _onTelechargerSujet(SujetConcoursItem sujet) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Télécharger : ${sujet.titre}'),
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => TelechargerCorrigeView(
+          id: sujet.id,
+          titre: sujet.titre,
+          sousTitre: sujet.description,
+          matiere: sujet.matiere,
+          concours: sujet.concours,
+          annee: sujet.anneeAcademique,
+          nomFichier: sujet.nomFichier,
+          type: 'sujet',
+        ),
       ),
     );
   }
+
+
 
 Future<void> _onModifierSujet(
   SujetConcoursItem sujet,

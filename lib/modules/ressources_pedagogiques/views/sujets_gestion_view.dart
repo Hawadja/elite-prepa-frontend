@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/routes/app_routes.dart';
+import 'telecharger_corrige_view.dart';
 
 class SujetGestionItem {
   final String id;
@@ -207,16 +208,25 @@ void _onVoirSujet(SujetGestionItem sujet) {
   // TÉLÉCHARGER
   // ============================================================
 
-  void _onTelechargerSujet(SujetGestionItem sujet) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Téléchargement de : ${sujet.titre}',
-        ),
-        behavior: SnackBarBehavior.floating,
+void _onTelechargerSujet(SujetGestionItem sujet) {
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (_) => TelechargerCorrigeView(
+        id: sujet.id,
+        titre: sujet.titre,
+        sousTitre: sujet.sousTitre,
+        matiere: sujet.matiere,
+        concours: sujet.concours,
+        annee: sujet.annee,
+        nomFichier: null,
+        type: 'sujet',
       ),
-    );
-  }
+    ),
+  );
+}
+
+
 
   // ============================================================
   // PARTAGER
@@ -317,129 +327,7 @@ void _onVoirSujet(SujetGestionItem sujet) {
   // MENU D'ACTIONS
   // ============================================================
 
-  void _showSujetActions(
-    SujetGestionItem sujet,
-  ) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (sheetContext) {
-        final isDark =
-            Theme.of(sheetContext).brightness ==
-                Brightness.dark;
 
-        final backgroundColor =
-            isDark ? darkCardColor : Colors.white;
-
-        return Container(
-          decoration: BoxDecoration(
-            color: backgroundColor,
-            borderRadius: const BorderRadius.vertical(
-              top: Radius.circular(22),
-            ),
-          ),
-          padding: const EdgeInsets.fromLTRB(
-            16,
-            10,
-            16,
-            24,
-          ),
-          child: SafeArea(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 42,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: isDark
-                        ? Colors.white24
-                        : Colors.black12,
-                    borderRadius:
-                        BorderRadius.circular(10),
-                  ),
-                ),
-                const SizedBox(height: 18),
-
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    sujet.titre,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: isDark
-                          ? Colors.white
-                          : Colors.black87,
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 14),
-
-                _buildActionTile(
-                  icon: Icons.visibility_outlined,
-                  label: 'Voir le sujet',
-                  color: primaryColor,
-                  onTap: () {
-                    Navigator.pop(sheetContext);
-                    _onVoirSujet(sujet);
-                  },
-                  isDark: isDark,
-                ),
-
-                _buildActionTile(
-                  icon: Icons.file_download_outlined,
-                  label: 'Télécharger',
-                  color: primaryColor,
-                  onTap: () {
-                    Navigator.pop(sheetContext);
-                    _onTelechargerSujet(sujet);
-                  },
-                  isDark: isDark,
-                ),
-
-                _buildActionTile(
-                  icon: Icons.share_outlined,
-                  label: 'Partager',
-                  color: primaryColor,
-                  onTap: () {
-                    Navigator.pop(sheetContext);
-                    _onPartagerSujet(sujet);
-                  },
-                  isDark: isDark,
-                ),
-
-                _buildActionTile(
-                  icon: Icons.edit_outlined,
-                  label: 'Modifier',
-                  color: primaryColor,
-                  onTap: () {
-                    Navigator.pop(sheetContext);
-                    _onModifierSujet(sujet);
-                  },
-                  isDark: isDark,
-                ),
-
-                _buildActionTile(
-                  icon: Icons.delete_outline,
-                  label: 'Supprimer',
-                  color: deleteRed,
-                  onTap: () {
-                    Navigator.pop(sheetContext);
-                    _onSupprimerSujet(sujet);
-                  },
-                  isDark: isDark,
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
 
   // ============================================================
   // NAVIGATION
@@ -1207,55 +1095,7 @@ void _onVoirSujet(SujetGestionItem sujet) {
   // ACTION TILE
   // ============================================================
 
-  Widget _buildActionTile({
-    required IconData icon,
-    required String label,
-    required Color color,
-    required VoidCallback onTap,
-    required bool isDark,
-  }) {
-    return ListTile(
-      contentPadding:
-          const EdgeInsets.symmetric(
-        horizontal: 4,
-      ),
-      leading: Container(
-        width: 40,
-        height: 40,
-        decoration: BoxDecoration(
-          color: color.withValues(
-            alpha: 0.10,
-          ),
-          borderRadius:
-              BorderRadius.circular(10),
-        ),
-        child: Icon(
-          icon,
-          color: color,
-          size: 20,
-        ),
-      ),
-      title: Text(
-        label,
-        style: TextStyle(
-          fontSize: 14,
-          fontWeight: FontWeight.w600,
-          color: color == deleteRed
-              ? deleteRed
-              : (isDark
-                  ? Colors.white
-                  : Colors.black87),
-        ),
-      ),
-      trailing: Icon(
-        Icons.chevron_right,
-        color: isDark
-            ? Colors.white38
-            : Colors.black26,
-      ),
-      onTap: onTap,
-    );
-  }
+
 
   // ============================================================
   // ÉTAT VIDE

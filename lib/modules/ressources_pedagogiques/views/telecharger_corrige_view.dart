@@ -40,10 +40,21 @@ class _TelechargerCorrigeViewState
 
   bool get isFiche => widget.type == 'fiche';
 
-  String get resourceName => isFiche ? 'fiche de cours' : 'corrigé';
+  bool get isSujet => widget.type == 'sujet';
 
-  String get resourceNameCapitalized =>
-      isFiche ? 'Fiche de cours' : 'Corrigé';
+  String get resourceName {
+    if (isFiche) return 'fiche de cours';
+    if (isSujet) return 'sujet de concours';
+    return 'corrigé';
+  }
+
+  String get resourceNameCapitalized {
+    if (isFiche) return 'Fiche de cours';
+    if (isSujet) return 'Sujet de concours';
+    return 'Corrigé';
+  }
+
+
 
   @override
   void initState() {
