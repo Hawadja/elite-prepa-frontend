@@ -62,6 +62,7 @@ class FicheDetailView extends StatelessWidget {
           icon: const Icon(
             Icons.arrow_back_ios_new,
             size: 20,
+            color: accentColor ,
           ),
           tooltip: 'Retour',
           onPressed: () => Navigator.pop(context),
@@ -340,7 +341,7 @@ class FicheDetailView extends StatelessWidget {
             children: [
               Icon(
                 icon,
-                color: primaryColor,
+                color: accentColor ,
                 size: 21,
               ),
               const SizedBox(width: 10),

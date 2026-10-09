@@ -81,7 +81,11 @@ class _MatieresViewState extends State<MatieresView> {
         shadowColor: Colors.transparent,
         leading: IconButton(
           tooltip: 'Retour',
-          icon: const Icon(Icons.arrow_back),
+          icon: const Icon(
+            Icons.arrow_back_ios_new,
+            size: 19,
+            color: accentColor ,
+          ),
           onPressed: () {
             Navigator.pop(context);
           },
@@ -97,6 +101,7 @@ class _MatieresViewState extends State<MatieresView> {
           IconButton(
             tooltip: 'Ajouter une matière',
             icon: const Icon(Icons.add),
+            color: accentColor,
             onPressed: () async {
               final result = await Navigator.pushNamed(
                 context,

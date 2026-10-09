@@ -17,6 +17,7 @@ class _AddEditMatiereViewState extends State<AddEditMatiereView> {
   static const Color darkBg = Color(0xFF091629);
   static const Color darkCardBg = Color(0xFF102542);
   static const Color lightBg = Color(0xFFF6F8FB);
+  static const Color accentColor = Color(0xFFF0A500);
 
   final _formKey = GlobalKey<FormState>();
 
@@ -116,7 +117,10 @@ class _AddEditMatiereViewState extends State<AddEditMatiereView> {
         shadowColor: Colors.transparent,
         leading: IconButton(
           tooltip: 'Retour',
-          icon: const Icon(Icons.arrow_back),
+          icon: const Icon( Icons.arrow_back_ios_new,
+            size: 19,
+            color: accentColor,
+            ),
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: Column(

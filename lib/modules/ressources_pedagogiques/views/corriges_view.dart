@@ -419,6 +419,7 @@ void _onModifierCorrige(CorrigeItem corrige) {
           icon: const Icon(
             Icons.arrow_back_ios_new,
             size: 19,
+            color: accentColor ,
           ),
           onPressed: () {
             Navigator.pop(context);
@@ -449,6 +450,7 @@ void _onModifierCorrige(CorrigeItem corrige) {
             icon: const Icon(
               Icons.add,
               size: 26,
+              color: accentColor,
             ),
             tooltip: 'Ajouter un corrigé',
               onPressed: () {
@@ -916,6 +918,7 @@ void _onModifierCorrige(CorrigeItem corrige) {
                           Icon(
                             Icons.visibility_outlined,
                             size: 19,
+                            color: Colors.black,
                           ),
                           SizedBox(width: 10),
                           Text('Voir'),
@@ -929,6 +932,7 @@ void _onModifierCorrige(CorrigeItem corrige) {
                           Icon(
                             Icons.file_download_outlined,
                             size: 19,
+                            color: Colors.black,
                           ),
                           SizedBox(width: 10),
                           Text('Télécharger'),
@@ -942,6 +946,7 @@ void _onModifierCorrige(CorrigeItem corrige) {
                           Icon(
                             Icons.share_outlined,
                             size: 19,
+                            color: Colors.black,
                           ),
                           SizedBox(width: 10),
                           Text('Partager'),
@@ -955,6 +960,7 @@ void _onModifierCorrige(CorrigeItem corrige) {
                           Icon(
                             Icons.edit_outlined,
                             size: 19,
+                            color: Colors.black,
                           ),
                           SizedBox(width: 10),
                           Text('Modifier'),

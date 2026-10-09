@@ -59,6 +59,7 @@ return Scaffold(
       icon: const Icon(
         Icons.arrow_back_ios_new,
         size: 20,
+        color: accentColor ,
       ),
       onPressed: () => Navigator.pop(context),
     ),

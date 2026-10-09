@@ -288,7 +288,7 @@ class _SujetsConcoursViewState extends State<SujetsConcoursView> {
           icon: const Icon(
             Icons.arrow_back_ios_new,
             size: 19,
-            color: Colors.white,
+            color: accentColor ,
           ),
           onPressed: () => Navigator.pop(context),
           tooltip: 'Retour',

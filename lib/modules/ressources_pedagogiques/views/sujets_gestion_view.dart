@@ -390,6 +390,7 @@ void _onTelechargerSujet(SujetGestionItem sujet) {
           icon: const Icon(
             Icons.arrow_back_ios_new,
             size: 19,
+            color: accentColor ,
           ),
           onPressed: () {
             Navigator.pop(context);

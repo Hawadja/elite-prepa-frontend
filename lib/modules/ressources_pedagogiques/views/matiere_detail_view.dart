@@ -108,9 +108,9 @@ class _MatiereDetailViewState extends State<MatiereDetailView> {
                   onPressed: () =>
                       Navigator.of(context).pop(),
                   icon: const Icon(
-                    Icons.arrow_back_ios,
+                    Icons.arrow_back_ios_new,
                     size: 14,
-                    color: AppColors.primaryBlue,
+                    color: Color(0xFFF0A500),
                   ),
                   label: const Text(
                     'Retour aux matières',
