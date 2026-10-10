@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import '../models/matiere.dart';
 
 class MatiereRepository {
+
   static const String _baseUrl = 'http://192.168.137.1:3000';
 
   /// Afficher toutes les matières.
@@ -44,10 +45,10 @@ class MatiereRepository {
 
         return Matiere.fromJson(item);
       }).toList();
-    } catch (e) {
-      throw Exception(
-        'Impossible de charger les matières : $e',
-      );
+    } catch (e, stackTrace) {
+      print('ERREUR CHARGEMENT MATIERES : $e');
+      print(stackTrace);
+      rethrow;
     }
   }
 

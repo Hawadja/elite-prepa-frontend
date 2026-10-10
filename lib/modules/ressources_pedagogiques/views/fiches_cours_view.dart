@@ -4,6 +4,9 @@ import '../../../core/routes/app_routes.dart';
 import 'add_edit_fiche_view.dart';
 import 'telecharger_corrige_view.dart';
 import 'fiche_detail_view.dart';
+import '../viewmodels/fiche_cours_viewmodel.dart';
+import '../models/matiere.dart';
+import '../repositories/matiere_repository.dart';
 
 class FicheItem {
   final String id;
@@ -48,41 +51,112 @@ class _FichesCoursViewState extends State<FichesCoursView> {
       TextEditingController();
 
   String _selectedMatiere = 'Toutes';
+  String? _selectedMatiereId;
 
-  // Données de démonstration
-final List<FicheItem> _fiches = [
-  FicheItem(
-    id: '1',
-    titre: 'Limites et continuité',
-    matiere: 'Mathématiques',
-    description:
-        'Cours sur les limites, la continuité et les propriétés fondamentales.',
-    taille: '2,4 Mo',
-    nomFichier: 'limites_continuite.pdf',
-  ),
-  FicheItem(
-    id: '2',
-    titre: 'Ondes mécaniques',
-    matiere: 'Physique',
-    description:
-        'Cours sur les ondes mécaniques progressives.',
-    taille: '3,1 Mo',
-    nomFichier: 'ondes_mecaniques.pdf',
-  ),
-  FicheItem(
-    id: '3',
-    titre: 'Réduction des endomorphismes',
-    matiere: 'Mathématiques',
-    description:
-        'Cours sur la diagonalisation et la réduction des endomorphismes.',
-    taille: '1,8 Mo',
-    nomFichier: 'reduction_endomorphismes.pdf',
-  ),
-];
+  final MatiereRepository _matiereRepository = MatiereRepository();
+  List<Matiere> _matieres = [];
+
+  late final FicheCoursViewModel _viewModel;
+  List<FicheItem> _fiches = [];
+
+  bool _isLoading = true;
+  String? _errorMessage;
+  int _currentPage = 1;
+  int _totalPages = 1;
+  int _totalItems = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _viewModel = FicheCoursViewModel();
+    _chargerMatieres();
+    _chargerFiches();
+  }
+
+  Future<void> _chargerMatieres() async {
+    try {
+    final matieres = await _matiereRepository.getMatieres();
+
+
+    if (!mounted) return;
+
+    setState(() {
+      _matieres = matieres;
+    });
+
+
+    } catch (e) {
+    if (!mounted) return;
+
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'Impossible de charger les matières : $e',
+        ),
+      ),
+    );
+
+
+  }
+}
+
+
+Future<void> _chargerFiches({int page = 1}) async {
+  setState(() {
+    _isLoading = true;
+    _errorMessage = null;
+  });
+
+  try {
+    if (page == 1) {
+      await _viewModel.chargerFiches(nouvelleRecherche: true);
+    } else {
+      await _viewModel.allerPage(page);
+    }
+
+    if (!mounted) return;
+
+    setState(() {
+      _fiches = _viewModel.fiches.map((fiche) {
+        return FicheItem(
+          id: fiche.id,
+          titre: fiche.titre,
+          matiere: fiche.matiereNom.isNotEmpty
+              ? fiche.matiereNom
+              : 'Matière non renseignée',
+          description: fiche.description,
+          format: 'PDF',
+          taille: 'PDF disponible',
+          nomFichier: fiche.fichier.split('/').last,
+        );
+      }).toList();
+
+      _currentPage = _viewModel.currentPage;
+      _totalPages = _viewModel.totalPages;
+      _totalItems = _viewModel.totalItems;
+      _errorMessage = _viewModel.errorMessage;
+    });
+  } catch (e) {
+    if (!mounted) return;
+
+    setState(() {
+      _errorMessage = e.toString();
+    });
+  } finally {
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+}
+
 
   @override
   void dispose() {
     _searchController.dispose();
+    _viewModel.dispose();
     super.dispose();
   }
 
@@ -105,22 +179,66 @@ final List<FicheItem> _fiches = [
   // FILTRAGE
   // ============================================================
 
-  List<FicheItem> get _filteredFiches {
-    final query = _searchController.text.trim().toLowerCase();
+List<FicheItem> get _filteredFiches {
+  final query = _searchController.text.trim().toLowerCase();
 
-    return _fiches.where((fiche) {
-      final matchesSearch =
-          fiche.titre.toLowerCase().contains(query) ||
-          fiche.matiere.toLowerCase().contains(query);
-
-      final matchesMatiere =
-          _selectedMatiere == 'Toutes' ||
-          fiche.matiere == _selectedMatiere;
-
-      return matchesSearch && matchesMatiere;
-    }).toList();
+  if (query.isEmpty) {
+    return _fiches;
   }
 
+  return _fiches.where((fiche) {
+    return fiche.titre.toLowerCase().contains(query) ||
+        fiche.matiere.toLowerCase().contains(query);
+  }).toList();
+}
+
+
+  Future<void> _rechercherFiches(String valeur) async {
+  setState(() {
+    _isLoading = true;
+    _errorMessage = null;
+  });
+
+  try {
+    await _viewModel.rechercher(valeur);
+
+    if (!mounted) return;
+
+    setState(() {
+      _errorMessage = _viewModel.errorMessage;
+
+      _fiches = _viewModel.fiches.map((fiche) {
+        return FicheItem(
+          id: fiche.id,
+          titre: fiche.titre,
+          matiere: fiche.matiereNom.isNotEmpty
+              ? fiche.matiereNom
+              : 'Matière non renseignée',
+          description: fiche.description,
+          format: 'PDF',
+          taille: 'PDF disponible',
+          nomFichier: fiche.fichier.split('/').last,
+        );
+      }).toList();
+
+      _currentPage = _viewModel.currentPage;
+      _totalPages = _viewModel.totalPages;
+      _totalItems = _viewModel.totalItems;
+    });
+  } catch (e) {
+    if (!mounted) return;
+
+    setState(() {
+      _errorMessage = e.toString();
+    });
+  } finally {
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+}
   // ============================================================
   // NAVIGATION
   // ============================================================
@@ -249,7 +367,7 @@ final List<FicheItem> _fiches = [
               const SizedBox(height: 4),
 
               Text(
-                '${_filteredFiches.length} fiche(s) disponible(s)',
+                '$_totalItems fiche(s) disponible(s)',
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: secondaryTextColor,
                 ),
@@ -278,10 +396,10 @@ final List<FicheItem> _fiches = [
                 ),
                 child: TextField(
                   controller: _searchController,
-                  onChanged: (_) {
-                    setState(() {});
+                  onChanged: (value) {
+                    _rechercherFiches(value);
                   },
-                  style: TextStyle(
+                                    style: TextStyle(
                     fontSize: 13,
                     color: textColor,
                   ),
@@ -367,7 +485,58 @@ final List<FicheItem> _fiches = [
               // LISTE
               // --------------------------------------------------
 
-              if (_filteredFiches.isEmpty)
+              if (_isLoading)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 40),
+                  child: Center(
+                    child: CircularProgressIndicator(
+                      color: accentColor,
+                    ),
+                  ),
+                )
+              else if (_errorMessage != null)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: cardColor,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Column(
+                    children: [
+                      const Icon(
+                        Icons.cloud_off_outlined,
+                        size: 40,
+                        color: accentColor,
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Impossible de charger les fiches',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: textColor,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        _errorMessage!,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: secondaryTextColor,
+                          fontSize: 12,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      OutlinedButton.icon(
+                        onPressed: () => _chargerFiches(page: _currentPage),
+                        icon: const Icon(Icons.refresh),
+                        label: const Text('Réessayer'),
+                      ),
+                    ],
+                  ),
+                )
+              else if (_filteredFiches.isEmpty)
                 _buildEmptyState(
                   cardColor: cardColor,
                   textColor: textColor,
@@ -376,18 +545,15 @@ final List<FicheItem> _fiches = [
               else
                 ListView.separated(
                   shrinkWrap: true,
-                  physics:
-                      const NeverScrollableScrollPhysics(),
+                  physics: const NeverScrollableScrollPhysics(),
                   itemCount: _filteredFiches.length,
-                  separatorBuilder: (_, _) =>
-                      const SizedBox(height: 10),
+                  separatorBuilder: (_, _) => const SizedBox(height: 10),
                   itemBuilder: (context, index) {
                     return _buildFicheCard(
                       fiche: _filteredFiches[index],
                       cardColor: cardColor,
                       textColor: textColor,
-                      secondaryTextColor:
-                          secondaryTextColor,
+                      secondaryTextColor: secondaryTextColor,
                     );
                   },
                 ),
@@ -414,15 +580,13 @@ final List<FicheItem> _fiches = [
                   ),
                 ),
                 child: Row(
-                  mainAxisAlignment:
-                      MainAxisAlignment.center,
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     IconButton(
-                      onPressed: () {},
-                      icon: const Icon(
-                        Icons.chevron_left,
-                        size: 20,
-                      ),
+                      onPressed: !_isLoading && _currentPage > 1
+                          ? () => _chargerFiches(page: _currentPage - 1)
+                          : null,
+                      icon: const Icon(Icons.chevron_left, size: 20),
                       color: secondaryTextColor,
                       tooltip: 'Page précédente',
                     ),
@@ -433,41 +597,21 @@ final List<FicheItem> _fiches = [
                       ),
                       decoration: BoxDecoration(
                         color: primaryColor,
-                        borderRadius:
-                            BorderRadius.circular(7),
+                        borderRadius: BorderRadius.circular(7),
                       ),
-                      child: const Text(
-                        '1',
-                        style: TextStyle(
+                      child: Text(
+                        '$_currentPage / $_totalPages',
+                        style: const TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                     ),
-                    TextButton(
-                      onPressed: () {},
-                      child: Text(
-                        '2',
-                        style: TextStyle(
-                          color: secondaryTextColor,
-                        ),
-                      ),
-                    ),
-                    TextButton(
-                      onPressed: () {},
-                      child: Text(
-                        '3',
-                        style: TextStyle(
-                          color: secondaryTextColor,
-                        ),
-                      ),
-                    ),
                     IconButton(
-                      onPressed: () {},
-                      icon: const Icon(
-                        Icons.chevron_right,
-                        size: 20,
-                      ),
+                      onPressed: !_isLoading && _currentPage < _totalPages
+                          ? () => _chargerFiches(page: _currentPage + 1)
+                          : null,
+                      icon: const Icon(Icons.chevron_right, size: 20),
                       color: secondaryTextColor,
                       tooltip: 'Page suivante',
                     ),
@@ -807,77 +951,165 @@ final List<FicheItem> _fiches = [
   void _showMatiereFilter(
     BuildContext context,
     bool isDark,
-  ) {
-    final matieres = [
-      'Toutes',
-      'Mathématiques',
-      'Physique',
-      'Chimie',
-    ];
-
+    ) {
     showModalBottomSheet(
-      context: context,
-      backgroundColor: isDark
-          ? const Color(0xFF102542)
-          : Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(18),
-        ),
-      ),
-      builder: (context) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(
-              20,
-              18,
-              20,
-              20,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment:
-                  CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Filtrer par matière',
-                  style: TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.bold,
-                    color: isDark
-                        ? Colors.white
-                        : primaryColor,
-                  ),
+    context: context,
+    backgroundColor: isDark
+    ? const Color(0xFF102542)
+    : Colors.white,
+    shape: const RoundedRectangleBorder(
+    borderRadius: BorderRadius.vertical(
+    top: Radius.circular(18),
+    ),
+    ),
+    builder: (sheetContext) {
+    return SafeArea(
+    child: Padding(
+    padding: const EdgeInsets.fromLTRB(
+    20,
+    18,
+    20,
+    20,
+    ),
+    child: Column(
+    mainAxisSize: MainAxisSize.min,
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+    Text(
+    'Filtrer par matière',
+    style: TextStyle(
+    fontSize: 17,
+    fontWeight: FontWeight.bold,
+    color: isDark
+    ? Colors.white
+    : primaryColor,
+    ),
+    ),
+    const SizedBox(height: 12),
+
+    
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Toutes les matières'),
+                leading: Icon(
+                  _selectedMatiereId == null
+                      ? Icons.radio_button_checked
+                      : Icons.radio_button_off,
+                  color: _selectedMatiereId == null
+                      ? primaryColor
+                      : Colors.grey,
                 ),
-                const SizedBox(height: 12),
-                ...matieres.map(
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  _appliquerFiltreMatiere(null);
+                },
+              ),
+
+              if (_matieres.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 12,
+                  ),
+                  child: Text(
+                    'Aucune matière chargée.',
+                    style: TextStyle(
+                      color: isDark
+                          ? Colors.white70
+                          : Colors.black54,
+                    ),
+                  ),
+                )
+              else
+                ..._matieres.map(
                   (matiere) => ListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: Text(matiere),
+                    title: Text(
+                      matiere.nom,
+                      style: TextStyle(
+                        color: isDark
+                            ? Colors.white
+                            : Colors.black87,
+                      ),
+                    ),
+                    subtitle: matiere.code.isNotEmpty
+                        ? Text(matiere.code)
+                        : null,
                     leading: Icon(
-                      _selectedMatiere == matiere
+                      _selectedMatiereId == matiere.id
                           ? Icons.radio_button_checked
                           : Icons.radio_button_off,
                       color:
-                          _selectedMatiere == matiere
+                          _selectedMatiereId == matiere.id
                               ? primaryColor
                               : Colors.grey,
                     ),
                     onTap: () {
-                      setState(() {
-                        _selectedMatiere = matiere;
-                      });
-                      Navigator.pop(context);
+                      Navigator.pop(sheetContext);
+                      _appliquerFiltreMatiere(matiere);
                     },
                   ),
                 ),
-              ],
-            ),
+            ],
           ),
-        );
-      },
+        ),
+      );
+    },
+
     );
   }
+
+  Future<void> _appliquerFiltreMatiere(
+    Matiere? matiere,
+    ) async {
+    setState(() {
+    _selectedMatiere = matiere?.nom ?? 'Toutes';
+    _selectedMatiereId = matiere?.id;
+    _isLoading = true;
+    _errorMessage = null;
+    });
+
+    try {
+    await _viewModel.filtrerMatiere(matiere?.id);
+
+    if (!mounted) return;
+
+    setState(() {
+      _errorMessage = _viewModel.errorMessage;
+
+      _fiches = _viewModel.fiches.map((fiche) {
+        return FicheItem(
+          id: fiche.id,
+          titre: fiche.titre,
+          matiere: fiche.matiereNom.isNotEmpty
+              ? fiche.matiereNom
+              : 'Matière non renseignée',
+          description: fiche.description,
+          format: 'PDF',
+          taille: 'PDF disponible',
+          nomFichier: fiche.fichier.split('/').last,
+        );
+      }).toList();
+
+      _currentPage = _viewModel.currentPage;
+      _totalPages = _viewModel.totalPages;
+      _totalItems = _viewModel.totalItems;
+    });
+
+    } catch (e) {
+    if (!mounted) return;
+
+    setState(() {
+      _errorMessage = e.toString();
+    });
+
+    } finally {
+    if (mounted) {
+    setState(() {
+    _isLoading = false;
+    });
+    }
+    }
+    }
 
   // ============================================================
   // ACTIONS FICHE
@@ -1046,6 +1278,4 @@ void _onTelechargerFiche(FicheItem fiche) {
     ),
   );
 }
-
-
 }
