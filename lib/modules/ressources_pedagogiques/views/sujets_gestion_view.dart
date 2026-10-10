@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
+
+import 'dart:async';
+
 import '../../../core/routes/app_routes.dart';
+import '../viewmodels/sujet_viewmodel.dart';
 import 'telecharger_corrige_view.dart';
 
 class SujetGestionItem {
@@ -52,59 +56,94 @@ class _SujetsGestionViewState extends State<SujetsGestionView> {
   int _selectedChipIndex = 0;
   int _currentPage = 1;
 
-  final TextEditingController _searchController =
-      TextEditingController();
+  final TextEditingController _searchController = TextEditingController();
+  Timer? _searchDebounce;
 
-  final List<String> _filters = [
-    'Tous',
-    'Maths',
-    'Physique',
-    '2026',
-  ];
+  final List<String> _filters = ['Tous', 'Maths', 'Physique', '2026'];
 
   // ============================================================
-  // DONNÉES TEMPORAIRES
-  // À remplacer plus tard par les données de l'API
+  // DONNÉES DU BACKEND
   // ============================================================
 
-  final List<SujetGestionItem> _sujets = [
-    SujetGestionItem(
-      id: '1',
-      titre: 'Sujet 1 — Limites et continuité',
-      sousTitre: 'Limites et continuité',
-      matiere: 'Mathématiques',
-      concours: 'Concours',
-      annee: '2026',
-      aCorrige: true,
-    ),
-    SujetGestionItem(
-      id: '2',
-      titre: 'Sujet 2 — Cinématique',
-      sousTitre: 'Cinématique',
-      matiere: 'Physique',
-      concours: 'Concours',
-      annee: '2026',
-      aCorrige: true,
-    ),
-    SujetGestionItem(
-      id: '3',
-      titre: 'Sujet 3 — Électromagnétisme',
-      sousTitre: 'Électromagnétisme',
-      matiere: 'Physique',
-      concours: 'Concours',
-      annee: '2026',
-      aCorrige: true,
-    ),
-  ];
+  final SujetViewModel _sujetViewModel = SujetViewModel();
+
+  List<SujetGestionItem> _sujets = [];
+
+  bool _isLoading = true;
+  String? _errorMessage;
+
+  int _totalSujets = 0;
+  int _totalPages = 1;
+
+  static const int _pageSize = 10;
 
   // ============================================================
   // CYCLE DE VIE
   // ============================================================
 
   @override
+  void initState() {
+    super.initState();
+    _chargerSujets();
+  }
+
+  @override
   void dispose() {
+    _searchDebounce?.cancel();
     _searchController.dispose();
     super.dispose();
+  }
+
+  // ============================================================
+  // CHARGEMENT DES SUJETS DEPUIS LE BACKEND
+  // ============================================================
+
+  Future<void> _chargerSujets() async {
+    if (!mounted) return;
+
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final resultat = await _sujetViewModel.loadSujets(
+        search: _searchController.text.trim(),
+        page: _currentPage,
+        limit: _pageSize,
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        _sujets = resultat.items.map((sujet) {
+          return SujetGestionItem(
+            id: sujet.id,
+            titre: sujet.titre,
+            sousTitre: sujet.description,
+            matiere: sujet.matiereNom.isNotEmpty
+                ? sujet.matiereNom
+                : 'Matière non renseignée',
+            concours: sujet.concours,
+            annee: sujet.anneeAcademique,
+            aCorrige: sujet.aCorrige,
+          );
+        }).toList();
+
+        _totalSujets = resultat.total;
+        _totalPages = resultat.totalPages < 1 ? 1 : resultat.totalPages;
+
+        _currentPage = resultat.page;
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        _isLoading = false;
+        _errorMessage = e.toString();
+      });
+    }
   }
 
   // ============================================================
@@ -128,21 +167,15 @@ class _SujetsGestionViewState extends State<SujetsGestionView> {
 
     switch (_selectedChipIndex) {
       case 1:
-        result = result.where(
-          (sujet) => sujet.matiere == 'Mathématiques',
-        );
+        result = result.where((sujet) => sujet.matiere == 'Mathématiques');
         break;
 
       case 2:
-        result = result.where(
-          (sujet) => sujet.matiere == 'Physique',
-        );
+        result = result.where((sujet) => sujet.matiere == 'Physique');
         break;
 
       case 3:
-        result = result.where(
-          (sujet) => sujet.annee == '2026',
-        );
+        result = result.where((sujet) => sujet.annee == '2026');
         break;
     }
 
@@ -154,10 +187,7 @@ class _SujetsGestionViewState extends State<SujetsGestionView> {
   // ============================================================
 
   Future<void> _onAddSujet() async {
-    final result = await Navigator.pushNamed(
-      context,
-      AppRoutes.addEditSujet,
-    );
+    final result = await Navigator.pushNamed(context, AppRoutes.addEditSujet);
 
     if (result == true && mounted) {
       setState(() {});
@@ -168,9 +198,7 @@ class _SujetsGestionViewState extends State<SujetsGestionView> {
   // MODIFIER
   // ============================================================
 
-  Future<void> _onModifierSujet(
-    SujetGestionItem sujet,
-  ) async {
+  Future<void> _onModifierSujet(SujetGestionItem sujet) async {
     final result = await Navigator.pushNamed(
       context,
       AppRoutes.addEditSujet,
@@ -194,39 +222,35 @@ class _SujetsGestionViewState extends State<SujetsGestionView> {
   // VOIR
   // ============================================================
 
-void _onVoirSujet(SujetGestionItem sujet) {
-  Navigator.pushNamed(
-    context,
-    AppRoutes.sujetDetail,
-    arguments: {
-      'hasCorrige': sujet.aCorrige,
-    },
-  );
-}
+  void _onVoirSujet(SujetGestionItem sujet) {
+    Navigator.pushNamed(
+      context,
+      AppRoutes.sujetDetail,
+      arguments: {'hasCorrige': sujet.aCorrige},
+    );
+  }
 
   // ============================================================
   // TÉLÉCHARGER
   // ============================================================
 
-void _onTelechargerSujet(SujetGestionItem sujet) {
-  Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (_) => TelechargerCorrigeView(
-        id: sujet.id,
-        titre: sujet.titre,
-        sousTitre: sujet.sousTitre,
-        matiere: sujet.matiere,
-        concours: sujet.concours,
-        annee: sujet.annee,
-        nomFichier: null,
-        type: 'sujet',
+  void _onTelechargerSujet(SujetGestionItem sujet) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => TelechargerCorrigeView(
+          id: sujet.id,
+          titre: sujet.titre,
+          sousTitre: sujet.sousTitre,
+          matiere: sujet.matiere,
+          concours: sujet.concours,
+          annee: sujet.annee,
+          nomFichier: null,
+          type: 'sujet',
+        ),
       ),
-    ),
-  );
-}
-
-
+    );
+  }
 
   // ============================================================
   // PARTAGER
@@ -235,9 +259,7 @@ void _onTelechargerSujet(SujetGestionItem sujet) {
   void _onPartagerSujet(SujetGestionItem sujet) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(
-          'Partage de : ${sujet.titre}',
-        ),
+        content: Text('Partage de : ${sujet.titre}'),
         behavior: SnackBarBehavior.floating,
       ),
     );
@@ -247,18 +269,14 @@ void _onTelechargerSujet(SujetGestionItem sujet) {
   // SUPPRIMER
   // ============================================================
 
-  Future<void> _onSupprimerSujet(
-    SujetGestionItem sujet,
-  ) async {
-    final isDark =
-        Theme.of(context).brightness == Brightness.dark;
+  Future<void> _onSupprimerSujet(SujetGestionItem sujet) async {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
-          backgroundColor:
-              isDark ? darkCardColor : Colors.white,
+          backgroundColor: isDark ? darkCardColor : Colors.white,
           title: Text(
             'Supprimer le sujet ?',
             style: TextStyle(
@@ -268,9 +286,7 @@ void _onTelechargerSujet(SujetGestionItem sujet) {
           ),
           content: Text(
             'Voulez-vous vraiment supprimer « ${sujet.titre} » ?',
-            style: TextStyle(
-              color: isDark ? Colors.white70 : Colors.black54,
-            ),
+            style: TextStyle(color: isDark ? Colors.white70 : Colors.black54),
           ),
           actions: [
             TextButton(
@@ -279,11 +295,7 @@ void _onTelechargerSujet(SujetGestionItem sujet) {
               },
               child: Text(
                 'Annuler',
-                style: TextStyle(
-                  color: isDark
-                      ? Colors.white70
-                      : primaryColor,
-                ),
+                style: TextStyle(color: isDark ? Colors.white70 : primaryColor),
               ),
             ),
             ElevatedButton(
@@ -307,16 +319,12 @@ void _onTelechargerSujet(SujetGestionItem sujet) {
     }
 
     setState(() {
-      _sujets.removeWhere(
-        (item) => item.id == sujet.id,
-      );
+      _sujets.removeWhere((item) => item.id == sujet.id);
     });
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text(
-          'Sujet supprimé avec succès',
-        ),
+        content: Text('Sujet supprimé avec succès'),
         backgroundColor: Colors.green,
         behavior: SnackBarBehavior.floating,
       ),
@@ -326,8 +334,6 @@ void _onTelechargerSujet(SujetGestionItem sujet) {
   // ============================================================
   // MENU D'ACTIONS
   // ============================================================
-
-
 
   // ============================================================
   // NAVIGATION
@@ -350,25 +356,17 @@ void _onTelechargerSujet(SujetGestionItem sujet) {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark =
-        theme.brightness == Brightness.dark;
+    final isDark = theme.brightness == Brightness.dark;
 
-    final backgroundColor =
-        isDark ? darkBackground : lightBackground;
+    final backgroundColor = isDark ? darkBackground : lightBackground;
 
-    final cardColor =
-        isDark ? darkCardColor : Colors.white;
+    final cardColor = isDark ? darkCardColor : Colors.white;
 
-    final textColor =
-        isDark ? Colors.white : Colors.black87;
+    final textColor = isDark ? Colors.white : Colors.black87;
 
-    final secondaryTextColor =
-        isDark ? Colors.white70 : Colors.black54;
+    final secondaryTextColor = isDark ? Colors.white70 : Colors.black54;
 
-    final inputColor =
-        isDark
-            ? const Color(0xFF0D1F38)
-            : Colors.white;
+    final inputColor = isDark ? const Color(0xFF0D1F38) : Colors.white;
 
     final sujets = _filteredSujets;
 
@@ -378,7 +376,6 @@ void _onTelechargerSujet(SujetGestionItem sujet) {
       // ========================================================
       // APP BAR
       // ========================================================
-
       appBar: AppBar(
         backgroundColor: primaryColor,
         foregroundColor: Colors.white,
@@ -390,7 +387,7 @@ void _onTelechargerSujet(SujetGestionItem sujet) {
           icon: const Icon(
             Icons.arrow_back_ios_new,
             size: 19,
-            color: accentColor ,
+            color: accentColor,
           ),
           onPressed: () {
             Navigator.pop(context);
@@ -399,22 +396,15 @@ void _onTelechargerSujet(SujetGestionItem sujet) {
         ),
 
         title: const Column(
-          crossAxisAlignment:
-              CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               'Sujets de concours',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             Text(
               'Ressources · Elite-Prepa',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.normal,
-              ),
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.normal),
             ),
           ],
         ),
@@ -423,19 +413,12 @@ void _onTelechargerSujet(SujetGestionItem sujet) {
       // ========================================================
       // BODY
       // ========================================================
-
       body: SafeArea(
         bottom: false,
         child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(
-            16,
-            16,
-            16,
-            24,
-          ),
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
           child: Column(
-            crossAxisAlignment:
-                CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // --------------------------------------------------
               // TITRE DE SECTION
@@ -454,10 +437,7 @@ void _onTelechargerSujet(SujetGestionItem sujet) {
 
               Text(
                 'Consultez et gérez les sujets disponibles.',
-                style: TextStyle(
-                  fontSize: 13,
-                  color: secondaryTextColor,
-                ),
+                style: TextStyle(fontSize: 13, color: secondaryTextColor),
               ),
 
               const SizedBox(height: 18),
@@ -465,78 +445,73 @@ void _onTelechargerSujet(SujetGestionItem sujet) {
               // --------------------------------------------------
               // RECHERCHE + AJOUT
               // --------------------------------------------------
-
               Row(
                 children: [
                   Expanded(
                     child: Container(
                       height: 44,
-                      padding:
-                          const EdgeInsets.symmetric(
-                        horizontal: 12,
-                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
                       decoration: BoxDecoration(
                         color: inputColor,
-                        borderRadius:
-                            BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(10),
                         border: Border.all(
-                          color: isDark
-                              ? Colors.white12
-                              : Colors.black12,
+                          color: isDark ? Colors.white12 : Colors.black12,
                         ),
                       ),
                       child: Row(
                         children: [
-                          Icon(
-                            Icons.search,
-                            size: 20,
-                            color: accentColor,
-                          ),
+                          Icon(Icons.search, size: 20, color: accentColor),
 
                           const SizedBox(width: 8),
 
                           Expanded(
                             child: TextField(
-                              controller:
-                                  _searchController,
+                              controller: _searchController,
                               onChanged: (_) {
+                                _searchDebounce?.cancel();
+
                                 setState(() {
                                   _currentPage = 1;
                                 });
+
+                                _searchDebounce = Timer(
+                                  const Duration(milliseconds: 400),
+                                  () {
+                                    if (mounted) {
+                                      _chargerSujets();
+                                    }
+                                  },
+                                );
                               },
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: textColor,
-                              ),
-                              decoration:
-                                  InputDecoration(
-                                hintText:
-                                    'Rechercher un sujet...',
+                              style: TextStyle(fontSize: 13, color: textColor),
+                              decoration: InputDecoration(
+                                hintText: 'Rechercher un sujet...',
                                 hintStyle: TextStyle(
                                   fontSize: 13,
-                                  color:
-                                      secondaryTextColor,
+                                  color: secondaryTextColor,
                                 ),
-                                border:
-                                    InputBorder.none,
+                                border: InputBorder.none,
                                 isDense: true,
                               ),
                             ),
                           ),
 
-                          if (_searchController
-                              .text
-                              .isNotEmpty)
+                          if (_searchController.text.isNotEmpty)
                             GestureDetector(
                               onTap: () {
+                                _searchDebounce?.cancel();
                                 _searchController.clear();
-                                setState(() {});
+
+                                setState(() {
+                                  _currentPage = 1;
+                                });
+
+                                _chargerSujets();
                               },
                               child: Icon(
                                 Icons.close,
                                 size: 18,
-                                color:
-                                    secondaryTextColor,
+                                color: secondaryTextColor,
                               ),
                             ),
                         ],
@@ -550,10 +525,7 @@ void _onTelechargerSujet(SujetGestionItem sujet) {
                     height: 44,
                     child: ElevatedButton.icon(
                       onPressed: _onAddSujet,
-                      icon: const Icon(
-                        Icons.add,
-                        size: 18,
-                      ),
+                      icon: const Icon(Icons.add, size: 18),
                       label: const Text(
                         'Ajouter',
                         style: TextStyle(
@@ -561,20 +533,13 @@ void _onTelechargerSujet(SujetGestionItem sujet) {
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      style:
-                          ElevatedButton.styleFrom(
+                      style: ElevatedButton.styleFrom(
                         backgroundColor: accentColor,
-                        foregroundColor:
-                            Colors.black87,
+                        foregroundColor: Colors.black87,
                         elevation: 0,
-                        padding:
-                            const EdgeInsets.symmetric(
-                          horizontal: 14,
-                        ),
-                        shape:
-                            RoundedRectangleBorder(
-                          borderRadius:
-                              BorderRadius.circular(10),
+                        padding: const EdgeInsets.symmetric(horizontal: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
                         ),
                       ),
                     ),
@@ -587,78 +552,52 @@ void _onTelechargerSujet(SujetGestionItem sujet) {
               // --------------------------------------------------
               // FILTRES
               // --------------------------------------------------
-
               SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: Row(
-                  children:
-                      List.generate(
-                    _filters.length,
-                    (index) {
-                      final selected =
-                          _selectedChipIndex ==
-                              index;
+                  children: List.generate(_filters.length, (index) {
+                    final selected = _selectedChipIndex == index;
 
-                      return Padding(
-                        padding:
-                            const EdgeInsets.only(
-                          right: 8,
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: ChoiceChip(
+                        label: Text(_filters[index]),
+                        selected: selected,
+                        onSelected: (isSelected) {
+                          if (!isSelected) {
+                            return;
+                          }
+
+                          setState(() {
+                            _selectedChipIndex = index;
+                            _currentPage = 1;
+                          });
+                        },
+                        labelStyle: TextStyle(
+                          fontSize: 12,
+                          fontWeight: selected
+                              ? FontWeight.bold
+                              : FontWeight.w500,
+                          color: selected ? Colors.white : textColor,
                         ),
-                        child: ChoiceChip(
-                          label: Text(
-                            _filters[index],
-                          ),
-                          selected: selected,
-                          onSelected:
-                              (isSelected) {
-                            if (!isSelected) {
-                              return;
-                            }
-
-                            setState(() {
-                              _selectedChipIndex =
-                                  index;
-                              _currentPage = 1;
-                            });
-                          },
-                          labelStyle:
-                              TextStyle(
-                            fontSize: 12,
-                            fontWeight: selected
-                                ? FontWeight.bold
-                                : FontWeight.w500,
+                        selectedColor: primaryColor,
+                        backgroundColor: inputColor,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                          side: BorderSide(
                             color: selected
-                                ? Colors.white
-                                : textColor,
-                          ),
-                          selectedColor:
-                              primaryColor,
-                          backgroundColor:
-                              inputColor,
-                          shape:
-                              RoundedRectangleBorder(
-                            borderRadius:
-                                BorderRadius.circular(
-                              20,
-                            ),
-                            side: BorderSide(
-                              color: selected
-                                  ? primaryColor
-                                  : (isDark
-                                      ? Colors.white12
-                                      : Colors.black12),
-                            ),
-                          ),
-                          showCheckmark: false,
-                          padding:
-                              const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 4,
+                                ? primaryColor
+                                : (isDark ? Colors.white12 : Colors.black12),
                           ),
                         ),
-                      );
-                    },
-                  ),
+                        showCheckmark: false,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
+                      ),
+                    );
+                  }),
                 ),
               ),
 
@@ -667,10 +606,8 @@ void _onTelechargerSujet(SujetGestionItem sujet) {
               // --------------------------------------------------
               // EN-TÊTE LISTE
               // --------------------------------------------------
-
               Row(
-                mainAxisAlignment:
-                    MainAxisAlignment.spaceBetween,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
                     'Sujets disponibles',
@@ -682,11 +619,8 @@ void _onTelechargerSujet(SujetGestionItem sujet) {
                   ),
 
                   Text(
-                    '${sujets.length} sujet${sujets.length > 1 ? 's' : ''}',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: secondaryTextColor,
-                    ),
+                    '$_totalSujets sujet${_totalSujets > 1 ? 's' : ''}',
+                    style: TextStyle(fontSize: 12, color: secondaryTextColor),
                   ),
                 ],
               ),
@@ -696,44 +630,90 @@ void _onTelechargerSujet(SujetGestionItem sujet) {
               // --------------------------------------------------
               // LISTE
               // --------------------------------------------------
-
-              if (sujets.isEmpty)
+              if (_isLoading)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 40),
+                  child: Center(
+                    child: CircularProgressIndicator(color: accentColor),
+                  ),
+                )
+              else if (_errorMessage != null)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: cardColor,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: isDark ? Colors.white10 : Colors.black12,
+                    ),
+                  ),
+                  child: Column(
+                    children: [
+                      Icon(
+                        Icons.cloud_off_outlined,
+                        size: 40,
+                        color: secondaryTextColor,
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Impossible de charger les sujets.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: textColor,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'Vérifiez la connexion au serveur puis réessayez.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: secondaryTextColor,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      ElevatedButton.icon(
+                        onPressed: _chargerSujets,
+                        icon: const Icon(Icons.refresh),
+                        label: const Text('Réessayer'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: accentColor,
+                          foregroundColor: Colors.black87,
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              else if (sujets.isEmpty)
                 _buildEmptyState(
                   isDark: isDark,
                   textColor: textColor,
-                  secondaryTextColor:
-                      secondaryTextColor,
+                  secondaryTextColor: secondaryTextColor,
                 )
               else
                 ...sujets.map(
                   (sujet) => Padding(
-                    padding:
-                        const EdgeInsets.only(
-                      bottom: 12,
-                    ),
+                    padding: const EdgeInsets.only(bottom: 12),
                     child: _buildSujetCard(
                       sujet: sujet,
                       cardColor: cardColor,
                       textColor: textColor,
-                      secondaryTextColor:
-                          secondaryTextColor,
+                      secondaryTextColor: secondaryTextColor,
                       isDark: isDark,
                     ),
                   ),
                 ),
 
-              const SizedBox(height: 4),
-
               // --------------------------------------------------
               // PAGINATION
               // --------------------------------------------------
-
               if (sujets.isNotEmpty)
                 _buildPagination(
                   isDark: isDark,
                   textColor: textColor,
-                  secondaryTextColor:
-                      secondaryTextColor,
+                  secondaryTextColor: secondaryTextColor,
                 ),
             ],
           ),
@@ -743,51 +723,31 @@ void _onTelechargerSujet(SujetGestionItem sujet) {
       // ========================================================
       // BOTTOM NAVIGATION
       // ========================================================
-
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,
-        onDestinationSelected:
-            _onNavigationSelected,
-        backgroundColor:
-            isDark ? darkBackground : Colors.white,
-        indicatorColor:
-            accentColor.withValues(alpha: 0.18),
+        onDestinationSelected: _onNavigationSelected,
+        backgroundColor: isDark ? darkBackground : Colors.white,
+        indicatorColor: accentColor.withValues(alpha: 0.18),
         height: 68,
         destinations: const [
           NavigationDestination(
-            icon: Icon(
-              Icons.home_outlined,
-            ),
-            selectedIcon: Icon(
-              Icons.home,
-            ),
+            icon: Icon(Icons.home_outlined),
+            selectedIcon: Icon(Icons.home),
             label: 'Accueil',
           ),
           NavigationDestination(
-            icon: Icon(
-              Icons.menu_book_outlined,
-            ),
-            selectedIcon: Icon(
-              Icons.menu_book,
-            ),
+            icon: Icon(Icons.menu_book_outlined),
+            selectedIcon: Icon(Icons.menu_book),
             label: 'Révisions',
           ),
           NavigationDestination(
-            icon: Icon(
-              Icons.school_outlined,
-            ),
-            selectedIcon: Icon(
-              Icons.school,
-            ),
+            icon: Icon(Icons.school_outlined),
+            selectedIcon: Icon(Icons.school),
             label: 'Concours',
           ),
           NavigationDestination(
-            icon: Icon(
-              Icons.person_outline,
-            ),
-            selectedIcon: Icon(
-              Icons.person,
-            ),
+            icon: Icon(Icons.person_outline),
+            selectedIcon: Icon(Icons.person),
             label: 'Profil',
           ),
         ],
@@ -812,23 +772,17 @@ void _onTelechargerSujet(SujetGestionItem sujet) {
       decoration: BoxDecoration(
         color: cardColor,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: isDark
-              ? Colors.white10
-              : Colors.black12,
-        ),
+        border: Border.all(color: isDark ? Colors.white10 : Colors.black12),
       ),
       child: Column(
-        crossAxisAlignment:
-            CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // ------------------------------------------------------
           // TITRE + MENU
           // ------------------------------------------------------
 
           Row(
-            crossAxisAlignment:
-                CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
                 child: Text(
@@ -847,10 +801,7 @@ void _onTelechargerSujet(SujetGestionItem sujet) {
 
               PopupMenuButton<String>(
                 tooltip: 'Actions',
-                icon: Icon(
-                  Icons.more_vert,
-                  color: Colors.black,
-                ),
+                icon: Icon(Icons.more_vert, color: Colors.black),
                 onSelected: (value) {
                   switch (value) {
                     case 'voir':
@@ -942,12 +893,7 @@ void _onTelechargerSujet(SujetGestionItem sujet) {
                             color: deleteRed,
                           ),
                           SizedBox(width: 10),
-                          Text(
-                            'Supprimer',
-                            style: TextStyle(
-                              color: deleteRed,
-                            ),
-                          ),
+                          Text('Supprimer', style: TextStyle(color: deleteRed)),
                         ],
                       ),
                     ),
@@ -962,15 +908,11 @@ void _onTelechargerSujet(SujetGestionItem sujet) {
           // ------------------------------------------------------
           // SOUS-TITRE
           // ------------------------------------------------------
-
           Text(
             sujet.sousTitre,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: 13,
-              color: secondaryTextColor,
-            ),
+            style: TextStyle(fontSize: 13, color: secondaryTextColor),
           ),
 
           const SizedBox(height: 12),
@@ -978,7 +920,6 @@ void _onTelechargerSujet(SujetGestionItem sujet) {
           // ------------------------------------------------------
           // INFORMATIONS
           // ------------------------------------------------------
-
           Wrap(
             spacing: 8,
             runSpacing: 8,
@@ -1010,8 +951,7 @@ void _onTelechargerSujet(SujetGestionItem sujet) {
             Row(
               children: [
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(
+                  padding: const EdgeInsets.symmetric(
                     horizontal: 10,
                     vertical: 5,
                   ),
@@ -1019,12 +959,10 @@ void _onTelechargerSujet(SujetGestionItem sujet) {
                     color: isDark
                         ? const Color(0xFF173C2D)
                         : const Color(0xFFE8F5E9),
-                    borderRadius:
-                        BorderRadius.circular(20),
+                    borderRadius: BorderRadius.circular(20),
                   ),
                   child: Row(
-                    mainAxisSize:
-                        MainAxisSize.min,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(
                         Icons.check_circle_outline,
@@ -1036,10 +974,8 @@ void _onTelechargerSujet(SujetGestionItem sujet) {
                         'Corrigé disponible',
                         style: TextStyle(
                           fontSize: 11,
-                          fontWeight:
-                              FontWeight.bold,
-                          color:
-                              Colors.green.shade700,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.green.shade700,
                         ),
                       ),
                     ],
@@ -1064,24 +1000,15 @@ void _onTelechargerSujet(SujetGestionItem sujet) {
     required Color textColor,
   }) {
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 9,
-        vertical: 6,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
       decoration: BoxDecoration(
-        color: isDark
-            ? const Color(0xFF0D1F38)
-            : const Color(0xFFF5F7FA),
+        color: isDark ? const Color(0xFF0D1F38) : const Color(0xFFF5F7FA),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            icon,
-            size: 14,
-            color: accentColor,
-          ),
+          Icon(icon, size: 14, color: accentColor),
           const SizedBox(width: 5),
           Text(
             label,
@@ -1100,8 +1027,6 @@ void _onTelechargerSujet(SujetGestionItem sujet) {
   // ACTION TILE
   // ============================================================
 
-
-
   // ============================================================
   // ÉTAT VIDE
   // ============================================================
@@ -1113,30 +1038,18 @@ void _onTelechargerSujet(SujetGestionItem sujet) {
   }) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(
-        horizontal: 24,
-        vertical: 40,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
       decoration: BoxDecoration(
-        color: isDark
-            ? darkCardColor
-            : Colors.white,
-        borderRadius:
-            BorderRadius.circular(14),
-        border: Border.all(
-          color: isDark
-              ? Colors.white10
-              : Colors.black12,
-        ),
+        color: isDark ? darkCardColor : Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: isDark ? Colors.white10 : Colors.black12),
       ),
       child: Column(
         children: [
           Icon(
             Icons.description_outlined,
             size: 48,
-            color: isDark
-                ? Colors.white38
-                : Colors.black26,
+            color: isDark ? Colors.white38 : Colors.black26,
           ),
           const SizedBox(height: 12),
           Text(
@@ -1151,10 +1064,7 @@ void _onTelechargerSujet(SujetGestionItem sujet) {
           Text(
             'Modifiez votre recherche ou vos filtres.',
             textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 12,
-              color: secondaryTextColor,
-            ),
+            style: TextStyle(fontSize: 12, color: secondaryTextColor),
           ),
         ],
       ),
@@ -1170,68 +1080,76 @@ void _onTelechargerSujet(SujetGestionItem sujet) {
     required Color textColor,
     required Color secondaryTextColor,
   }) {
+    final int debut = _totalSujets == 0
+        ? 0
+        : ((_currentPage - 1) * _pageSize) + 1;
+
+    final int fin = ((_currentPage * _pageSize) > _totalSujets)
+        ? _totalSujets
+        : _currentPage * _pageSize;
+
+    final int pagesVisibles = _totalPages < 3 ? _totalPages : 3;
+
+    final int premierePageVisible = _totalPages <= 3
+        ? 1
+        : (_currentPage <= 2
+              ? 1
+              : (_currentPage >= _totalPages
+                    ? _totalPages - 2
+                    : _currentPage - 1));
+
     return Row(
-      mainAxisAlignment:
-          MainAxisAlignment.spaceBetween,
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          '1–${_filteredSujets.length} sur '
-          '${_filteredSujets.length} sujet'
-          '${_filteredSujets.length > 1 ? 's' : ''}',
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
-            color: secondaryTextColor,
+        Flexible(
+          child: Text(
+            '$debut–$fin sur $_totalSujets sujet'
+            '${_totalSujets > 1 ? 's' : ''}',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: secondaryTextColor,
+            ),
           ),
         ),
-
+        const SizedBox(width: 8),
         Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
             _buildPageButton(
               icon: Icons.chevron_left,
-              onTap: _currentPage > 1
+              onTap: !_isLoading && _currentPage > 1
                   ? () {
                       setState(() {
                         _currentPage--;
                       });
+                      _chargerSujets();
                     }
                   : null,
               isDark: isDark,
             ),
-
             const SizedBox(width: 4),
-
-            _buildPageNumberButton(
-              pageNumber: 1,
-              isSelected: _currentPage == 1,
-              isDark: isDark,
-            ),
-
+            for (
+              int page = premierePageVisible;
+              page < premierePageVisible + pagesVisibles;
+              page++
+            ) ...[
+              _buildPageNumberButton(
+                pageNumber: page,
+                isSelected: _currentPage == page,
+                isDark: isDark,
+              ),
+              if (page < pagesVisibles) const SizedBox(width: 4),
+            ],
             const SizedBox(width: 4),
-
-            _buildPageNumberButton(
-              pageNumber: 2,
-              isSelected: _currentPage == 2,
-              isDark: isDark,
-            ),
-
-            const SizedBox(width: 4),
-
-            _buildPageNumberButton(
-              pageNumber: 3,
-              isSelected: _currentPage == 3,
-              isDark: isDark,
-            ),
-
-            const SizedBox(width: 4),
-
             _buildPageButton(
               icon: Icons.chevron_right,
-              onTap: _currentPage < 3
+              onTap: !_isLoading && _currentPage < _totalPages
                   ? () {
                       setState(() {
                         _currentPage++;
                       });
+                      _chargerSujets();
                     }
                   : null,
               isDark: isDark,
@@ -1255,16 +1173,9 @@ void _onTelechargerSujet(SujetGestionItem sujet) {
       width: 32,
       height: 32,
       decoration: BoxDecoration(
-        color: isDark
-            ? const Color(0xFF0D1F38)
-            : Colors.white,
-        borderRadius:
-            BorderRadius.circular(8),
-        border: Border.all(
-          color: isDark
-              ? Colors.white12
-              : Colors.black12,
-        ),
+        color: isDark ? const Color(0xFF0D1F38) : Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: isDark ? Colors.white12 : Colors.black12),
       ),
       child: IconButton(
         padding: EdgeInsets.zero,
@@ -1272,9 +1183,7 @@ void _onTelechargerSujet(SujetGestionItem sujet) {
           icon,
           size: 18,
           color: onTap != null
-              ? (isDark
-                  ? Colors.white
-                  : Colors.black87)
+              ? (isDark ? Colors.white : Colors.black87)
               : Colors.grey,
         ),
         onPressed: onTap,
@@ -1292,11 +1201,14 @@ void _onTelechargerSujet(SujetGestionItem sujet) {
     required bool isDark,
   }) {
     return GestureDetector(
-      onTap: () {
-        setState(() {
-          _currentPage = pageNumber;
-        });
-      },
+      onTap: !_isLoading && _currentPage != pageNumber
+          ? () {
+              setState(() {
+                _currentPage = pageNumber;
+              });
+              _chargerSujets();
+            }
+          : null,
       child: Container(
         width: 32,
         height: 32,
@@ -1304,17 +1216,12 @@ void _onTelechargerSujet(SujetGestionItem sujet) {
         decoration: BoxDecoration(
           color: isSelected
               ? primaryColor
-              : (isDark
-                  ? const Color(0xFF0D1F38)
-                  : Colors.white),
-          borderRadius:
-              BorderRadius.circular(8),
+              : (isDark ? const Color(0xFF0D1F38) : Colors.white),
+          borderRadius: BorderRadius.circular(8),
           border: Border.all(
             color: isSelected
                 ? primaryColor
-                : (isDark
-                    ? Colors.white12
-                    : Colors.black12),
+                : (isDark ? Colors.white12 : Colors.black12),
           ),
         ),
         child: Text(
@@ -1324,9 +1231,7 @@ void _onTelechargerSujet(SujetGestionItem sujet) {
             fontWeight: FontWeight.bold,
             color: isSelected
                 ? Colors.white
-                : (isDark
-                    ? Colors.white70
-                    : Colors.black87),
+                : (isDark ? Colors.white70 : Colors.black87),
           ),
         ),
       ),

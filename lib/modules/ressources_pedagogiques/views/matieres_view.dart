@@ -23,6 +23,7 @@ class _MatieresViewState extends State<MatieresView> {
 
   List<Matiere> _matieres = [];
   bool _isLoading = true;
+  String? _errorMessage;
 
   @override
   void initState() {
@@ -31,14 +32,28 @@ class _MatieresViewState extends State<MatieresView> {
   }
 
   Future<void> _loadMatieres() async {
-    final matieres = await _viewModel.loadMatieres();
-
-    if (!mounted) return;
-
     setState(() {
-      _matieres = matieres;
-      _isLoading = false;
+      _isLoading = true;
+      _errorMessage = null;
     });
+
+    try {
+      final matieres = await _viewModel.loadMatieres();
+
+      if (!mounted) return;
+
+      setState(() {
+        _matieres = matieres;
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        _errorMessage = e.toString();
+        _isLoading = false;
+      });
+    }
   }
 
   List<Matiere> get _filteredMatieres {
@@ -168,28 +183,72 @@ class _MatieresViewState extends State<MatieresView> {
                         color: accentColor,
                       ),
                     )
-                  : _filteredMatieres.isEmpty
-                      ? _EmptyState(isDark: isDark)
-                      : ListView.separated(
-                          padding: const EdgeInsets.fromLTRB(
-                            16,
-                            6,
-                            16,
-                            16,
+                  : _errorMessage != null
+                      ? Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(24),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  Icons.cloud_off_outlined,
+                                  color: Colors.red,
+                                  size: 42,
+                                ),
+                                const SizedBox(height: 12),
+                                Text(
+                                  'Impossible de charger les matières',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: isDark ? Colors.white : primaryColor,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  _errorMessage!,
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: isDark ? Colors.white70 : Colors.black54,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                                ElevatedButton.icon(
+                                  onPressed: _loadMatieres,
+                                  icon: const Icon(Icons.refresh),
+                                  label: const Text('Réessayer'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: primaryColor,
+                                    foregroundColor: Colors.white,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                          itemCount: _filteredMatieres.length,
-                          separatorBuilder: (_, _) =>
-                              const SizedBox(height: 7),
-                          itemBuilder: (context, index) {
-                            final matiere = _filteredMatieres[index];
+                        )
+                      : _filteredMatieres.isEmpty
+                          ? _EmptyState(isDark: isDark)
+                          : ListView.separated(
+                              padding: const EdgeInsets.fromLTRB(
+                                16,
+                                6,
+                                16,
+                                16,
+                              ),
+                              itemCount: _filteredMatieres.length,
+                              separatorBuilder: (_, _) => const SizedBox(height: 7),
+                              itemBuilder: (context, index) {
+                                final matiere = _filteredMatieres[index];
 
-                            return _MatiereCard(
-                              matiere: matiere,
-                              isDark: isDark,
-                              onChanged: _loadMatieres,
-                            );
-                          },
-                        ),
+                                return _MatiereCard(
+                                  matiere: matiere,
+                                  isDark: isDark,
+                                  onChanged: _loadMatieres,
+                                );
+                              },
+                            ),
             ),
 
             // ========================================================
@@ -430,8 +489,7 @@ class _MatiereCard extends StatelessWidget {
                             ),
                           ),
                           content: Text(
-                            'Voulez-vous vraiment supprimer '
-                            '« ${matiere.nom} » ?',
+                            'Voulez-vous vraiment supprimer « ${matiere.nom} » ?',
                             style: TextStyle(
                               color: isDark ? Colors.white70 : Colors.black54,
                             ),
@@ -472,13 +530,14 @@ class _MatiereCard extends StatelessWidget {
 
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
-                        content: Text('Matière supprimée avec succès'),
-                        backgroundColor: Colors.green,
+                        content: Text(
+                          'Suppression indisponible : le jeton JWT administrateur '
+                          'doit être fourni par le module d’authentification.',
+                        ),
+                        backgroundColor: Colors.orange,
                         behavior: SnackBarBehavior.floating,
                       ),
                     );
-
-                    onChanged();
                   },
                 ),
                 ],

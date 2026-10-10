@@ -1,46 +1,175 @@
+import 'dart:convert';
+
+import 'package:http/http.dart' as http;
+
 import '../models/matiere.dart';
 
 class MatiereRepository {
-  Future<List<Matiere>> getMatieres() async {
-    await Future<void>.delayed(const Duration(milliseconds: 300));
+  static const String _baseUrl = 'http://192.168.137.1:3000';
 
-    return const [
-      Matiere(
-        id: '1',
-        nom: 'Mathématiques',
-        code: 'MATH',
-        description: 'Algèbre, analyse et probabilités.',
-      ),
-      Matiere(
-        id: '2',
-        nom: 'Physique',
-        code: 'PHYS',
-        description: 'Mécanique, électricité et physique générale.',
-      ),
-      Matiere(
-        id: '3',
-        nom: 'Chimie',
-        code: 'CHIM',
-        description: 'Chimie générale et chimie organique.',
-      ),
-      Matiere(
-        id: '4',
-        nom: 'Informatique',
-        code: 'INFO',
-        description: 'Algorithmique, programmation et systèmes.',
-      ),
-      Matiere(
-        id: '5',
-        nom: 'Français',
-        code: 'FR',
-        description: 'Expression française et compréhension.',
-      ),
-      Matiere(
-        id: '6',
-        nom: 'Anglais',
-        code: 'ANG',
-        description: 'Expression et compréhension anglaise.',
-      ),
-    ];
+  /// Afficher toutes les matières.
+  Future<List<Matiere>> getMatieres() async {
+    final uri = Uri.parse('$_baseUrl/api/matieres');
+
+    try {
+      final response = await http
+          .get(
+            uri,
+            headers: {
+              'Accept': 'application/json',
+            },
+          )
+          .timeout(const Duration(seconds: 15));
+
+      if (response.statusCode != 200) {
+        throw Exception(
+          'Erreur du serveur : HTTP ${response.statusCode}',
+        );
+      }
+
+      final dynamic data = jsonDecode(response.body);
+
+      if (data is! List) {
+        throw const FormatException(
+          'Le serveur n’a pas renvoyé une liste de matières.',
+        );
+      }
+
+      return data.map((item) {
+        if (item is! Map<String, dynamic>) {
+          throw const FormatException(
+            'Format JSON d’une matière invalide.',
+          );
+        }
+
+        return Matiere.fromJson(item);
+      }).toList();
+    } catch (e) {
+      throw Exception(
+        'Impossible de charger les matières : $e',
+      );
+    }
+  }
+
+  /// Ajouter une matière.
+  ///
+  /// Le jeton JWT est fourni par le mécanisme d'authentification
+  /// de l'application, géré par le membre responsable de ce module.
+  Future<void> createMatiere(
+    Matiere matiere, {
+    required String token,
+  }) async {
+    final uri = Uri.parse('$_baseUrl/api/matieres');
+
+    final response = await http
+        .post(
+          uri,
+          headers: _authorizedHeaders(token),
+          body: jsonEncode(matiere.toJson()),
+        )
+        .timeout(const Duration(seconds: 15));
+
+    _checkResponse(response);
+  }
+
+  /// Modifier une matière existante.
+  Future<void> updateMatiere(
+    Matiere matiere, {
+    required String token,
+  }) async {
+    if (matiere.id.isEmpty) {
+      throw ArgumentError(
+        'Impossible de modifier une matière sans identifiant.',
+      );
+    }
+
+    final uri = Uri.parse(
+      '$_baseUrl/api/matieres/${Uri.encodeComponent(matiere.id)}',
+    );
+
+    final response = await http
+        .put(
+          uri,
+          headers: _authorizedHeaders(token),
+          body: jsonEncode(matiere.toJson()),
+        )
+        .timeout(const Duration(seconds: 15));
+
+    _checkResponse(response);
+  }
+
+  /// Supprimer une matière.
+  Future<void> deleteMatiere(
+    String id, {
+    required String token,
+  }) async {
+    if (id.isEmpty) {
+      throw ArgumentError(
+        'Impossible de supprimer une matière sans identifiant.',
+      );
+    }
+
+    final uri = Uri.parse(
+      '$_baseUrl/api/matieres/${Uri.encodeComponent(id)}',
+    );
+
+    final response = await http
+        .delete(
+          uri,
+          headers: _authorizedHeaders(token),
+        )
+        .timeout(const Duration(seconds: 15));
+
+    _checkResponse(response);
+  }
+
+  /// En-têtes des requêtes protégées.
+  Map<String, String> _authorizedHeaders(String token) {
+    if (token.trim().isEmpty) {
+      throw ArgumentError(
+        'Le jeton d’authentification est obligatoire.',
+      );
+    }
+
+    return {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ${token.trim()}',
+    };
+  }
+
+  /// Vérifier la réponse du backend.
+  void _checkResponse(http.Response response) {
+    if (response.statusCode >= 200 &&
+        response.statusCode < 300) {
+      return;
+    }
+
+    String message = 'Erreur du serveur : HTTP ${response.statusCode}';
+
+    try {
+      final dynamic data = jsonDecode(response.body);
+
+      if (data is Map<String, dynamic>) {
+        final dynamic serverMessage =
+            data['message'] ?? data['error'];
+
+        if (serverMessage != null) {
+          message = serverMessage.toString();
+        }
+      }
+    } catch (_) {
+      // Conserver le message HTTP si la réponse n'est pas du JSON.
+    }
+
+    if (response.statusCode == 401) {
+      message = 'Authentification requise. Vérifie la session avec '
+          'le membre responsable du module.';
+    } else if (response.statusCode == 403) {
+      message = 'Accès refusé : le compte doit avoir le rôle '
+          'administrateur.';
+    }
+
+    throw Exception(message);
   }
 }

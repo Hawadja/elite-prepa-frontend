@@ -48,51 +48,43 @@ class _AddEditMatiereViewState extends State<AddEditMatiereView> {
     super.dispose();
   }
 
-  Future<void> _submitForm() async {
-    if (!_formKey.currentState!.validate()) return;
 
-    setState(() {
-      _isSubmitting = true;
-    });
+Future<void> _submitForm() async {
+  if (!_formKey.currentState!.validate()) return;
 
-    try {
-      if (_isEditing) {
-        // Logique de modification
-      } else {
-        // Logique d'ajout
-      }
+  setState(() {
+    _isSubmitting = true;
+  });
 
-      if (!mounted) return;
+  try {
+    // Le JWT doit être fourni par le module d'authentification.
+    // Ne pas afficher un faux succès ni envoyer une requête
+    // protégée sans jeton valide.
+    throw Exception(
+      'Authentification en attente : le jeton JWT doit être fourni '
+      'par le module d’authentification.',
+    );
+  } catch (e) {
+    if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            _isEditing
-                ? 'Matière modifiée avec succès'
-                : 'Matière créée avec succès',
-          ),
-          backgroundColor: Colors.green,
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          e.toString().replaceFirst('Exception: ', ''),
         ),
-      );
-
-      Navigator.pop(context, true);
-    } catch (e) {
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Erreur : ${e.toString()}'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isSubmitting = false;
-        });
-      }
+        backgroundColor: Colors.red,
+      ),
+    );
+  } finally {
+    if (mounted) {
+      setState(() {
+        _isSubmitting = false;
+      });
     }
   }
+}
+
+
 
   @override
   Widget build(BuildContext context) {
