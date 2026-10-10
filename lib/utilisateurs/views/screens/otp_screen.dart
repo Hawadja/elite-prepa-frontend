@@ -6,16 +6,22 @@ import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../models/user_model.dart';
 import '../../repository/auth_repository.dart';
+import '../../viewmodels/auth_cubit.dart';
 import '../../viewmodels/otp_cubit.dart';
 
 class OtpScreen extends StatelessWidget {
   final String email;
+  final String nom;
+  final String prenom;
   final AuthRepository? authRepository;
 
   const OtpScreen({
     super.key,
     required this.email,
+    this.nom = '',
+    this.prenom = '',
     this.authRepository,
   });
 
@@ -25,15 +31,21 @@ class OtpScreen extends StatelessWidget {
       create: (context) => OtpCubit(
         authRepository ?? AuthRepository(),
       ),
-      child: _OtpView(email: email),
+      child: _OtpView(email: email, nom: nom, prenom: prenom),
     );
   }
 }
 
 class _OtpView extends StatefulWidget {
   final String email;
+  final String nom;
+  final String prenom;
 
-  const _OtpView({required this.email});
+  const _OtpView({
+    required this.email,
+    this.nom = '',
+    this.prenom = '',
+  });
 
   @override
   State<_OtpView> createState() => _OtpViewState();
@@ -78,6 +90,7 @@ class _OtpViewState extends State<_OtpView> {
   void _resendCode() {
     if (_secondsRemaining > 0) return;
     _startCountdown();
+    context.read<OtpCubit>().resendOtp(widget.email);
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content:
@@ -93,7 +106,12 @@ class _OtpViewState extends State<_OtpView> {
       final values = _formKey.currentState!.value;
       final code = values['otp'] as String;
 
-      context.read<OtpCubit>().verifyOtp(widget.email, code);
+      context.read<OtpCubit>().verifyOtp(
+            email: widget.email,
+            code: code,
+            nom: widget.nom,
+            prenom: widget.prenom,
+          );
     }
   }
 
@@ -118,6 +136,18 @@ class _OtpViewState extends State<_OtpView> {
       body: BlocConsumer<OtpCubit, OtpState>(
         listener: (context, state) {
           if (state is OtpSuccess) {
+            final now = DateTime.now();
+            context.read<AuthCubit>().setAuthenticated(
+              UserModel(
+                id: state.userId ?? '',
+                nom: widget.nom,
+                prenom: widget.prenom,
+                email: widget.email,
+                roleId: '',
+                createdAt: now,
+                updatedAt: now,
+              ),
+            );
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
                 content: Text('Vérification réussie ! Bienvenue sur Elite Prépa.'),
@@ -137,7 +167,9 @@ class _OtpViewState extends State<_OtpView> {
           }
         },
         builder: (context, state) {
-          final isLoading = state is OtpLoading;
+          final isLoading = state is OtpLoading ||
+              state is ProfilCreating ||
+              state is OtpVerified;
 
           return SafeArea(
             child: Center(

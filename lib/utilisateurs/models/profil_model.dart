@@ -1,46 +1,65 @@
-import 'user_model.dart';
-
 class ProfilModel {
   final String id;
-  final UserModel? user;
-  final String? photoUrl;
+  final String userId;
+  final String nom;
+  final String prenom;
   final String? telephone;
-  final String? adresse;
+  final String? photoUrl;
+  final String? ville;
   final DateTime? dateNaissance;
-  final String? bio;
+  final String? lieuDeNaissance;
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
   const ProfilModel({
     required this.id,
-    this.user,
-    this.photoUrl,
+    required this.userId,
+    required this.nom,
+    required this.prenom,
     this.telephone,
-    this.adresse,
+    this.photoUrl,
+    this.ville,
     this.dateNaissance,
-    this.bio,
+    this.lieuDeNaissance,
     this.createdAt,
     this.updatedAt,
   });
 
   factory ProfilModel.fromJson(Map<String, dynamic> json) {
-    UserModel? parsedUser;
-    if (json['user'] is Map<String, dynamic>) {
-      parsedUser = UserModel.fromJson(json['user'] as Map<String, dynamic>);
-    } else if (json['userId'] is Map<String, dynamic>) {
-      parsedUser = UserModel.fromJson(json['userId'] as Map<String, dynamic>);
-    }
+    final rawUserId = json['userId'];
+    final userId = rawUserId is Map<String, dynamic>
+        ? (rawUserId['_id'] ?? '').toString()
+        : (rawUserId ?? '').toString();
+
+    final nom = (json['nom'] ??
+            (json['userId'] is Map ? (json['userId'] as Map)['nom'] : null) ??
+            (json['user'] is Map ? (json['user'] as Map)['nom'] : null) ??
+            '')
+        .toString();
+
+    final prenom = (json['prenom'] ??
+            (json['userId'] is Map ? (json['userId'] as Map)['prenom'] : null) ??
+            (json['user'] is Map ? (json['user'] as Map)['prenom'] : null) ??
+            '')
+        .toString();
+
+    final telephone = (json['telephone'] ??
+            (json['userId'] is Map ? (json['userId'] as Map)['telephone'] : null) ??
+            (json['user'] is Map ? (json['user'] as Map)['telephone'] : null))
+        ?.toString();
 
     return ProfilModel(
       id: (json['id'] ?? json['_id'] ?? '').toString(),
-      user: parsedUser,
+      userId: userId,
+      nom: nom,
+      prenom: prenom,
+      telephone: telephone,
       photoUrl: json['photoUrl']?.toString(),
-      telephone: json['telephone']?.toString(),
-      adresse: json['adresse']?.toString(),
+      ville: json['ville']?.toString(),
       dateNaissance: json['dateNaissance'] != null
           ? DateTime.tryParse(json['dateNaissance'].toString())
           : null,
-      bio: json['bio']?.toString(),
+      lieuDeNaissance: json['lieuDeNaissance']?.toString(),
       createdAt: json['createdAt'] != null
           ? DateTime.tryParse(json['createdAt'].toString())
           : null,
@@ -53,37 +72,57 @@ class ProfilModel {
   Map<String, dynamic> toJson() {
     return {
       'id': id,
-      if (user != null) 'user': user!.toJson(),
-      if (photoUrl != null) 'photoUrl': photoUrl,
+      'userId': userId,
+      'nom': nom,
+      'prenom': prenom,
       if (telephone != null) 'telephone': telephone,
-      if (adresse != null) 'adresse': adresse,
+      if (photoUrl != null) 'photoUrl': photoUrl,
+      if (ville != null) 'ville': ville,
       if (dateNaissance != null)
         'dateNaissance': dateNaissance!.toIso8601String(),
-      if (bio != null) 'bio': bio,
+      if (lieuDeNaissance != null) 'lieuDeNaissance': lieuDeNaissance,
       if (createdAt != null) 'createdAt': createdAt!.toIso8601String(),
       if (updatedAt != null) 'updatedAt': updatedAt!.toIso8601String(),
     };
   }
 
+  Map<String, dynamic> toUpdateJson() {
+    return {
+      'nom': nom,
+      'prenom': prenom,
+      if (telephone != null && telephone!.isNotEmpty) 'telephone': telephone,
+      if (photoUrl != null && photoUrl!.isNotEmpty) 'photoUrl': photoUrl,
+      if (ville != null && ville!.isNotEmpty) 'ville': ville,
+      if (dateNaissance != null)
+        'dateNaissance': dateNaissance!.toIso8601String(),
+      if (lieuDeNaissance != null && lieuDeNaissance!.isNotEmpty)
+        'lieuDeNaissance': lieuDeNaissance,
+    };
+  }
+
   ProfilModel copyWith({
     String? id,
-    UserModel? user,
-    String? photoUrl,
+    String? userId,
+    String? nom,
+    String? prenom,
     String? telephone,
-    String? adresse,
+    String? photoUrl,
+    String? ville,
     DateTime? dateNaissance,
-    String? bio,
+    String? lieuDeNaissance,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
     return ProfilModel(
       id: id ?? this.id,
-      user: user ?? this.user,
-      photoUrl: photoUrl ?? this.photoUrl,
+      userId: userId ?? this.userId,
+      nom: nom ?? this.nom,
+      prenom: prenom ?? this.prenom,
       telephone: telephone ?? this.telephone,
-      adresse: adresse ?? this.adresse,
+      photoUrl: photoUrl ?? this.photoUrl,
+      ville: ville ?? this.ville,
       dateNaissance: dateNaissance ?? this.dateNaissance,
-      bio: bio ?? this.bio,
+      lieuDeNaissance: lieuDeNaissance ?? this.lieuDeNaissance,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -95,12 +134,14 @@ class ProfilModel {
 
     return other is ProfilModel &&
         other.id == id &&
-        other.user == user &&
-        other.photoUrl == photoUrl &&
+        other.userId == userId &&
+        other.nom == nom &&
+        other.prenom == prenom &&
         other.telephone == telephone &&
-        other.adresse == adresse &&
+        other.photoUrl == photoUrl &&
+        other.ville == ville &&
         other.dateNaissance == dateNaissance &&
-        other.bio == bio &&
+        other.lieuDeNaissance == lieuDeNaissance &&
         other.createdAt == createdAt &&
         other.updatedAt == updatedAt;
   }
@@ -108,18 +149,20 @@ class ProfilModel {
   @override
   int get hashCode {
     return id.hashCode ^
-        user.hashCode ^
+        userId.hashCode ^
+        nom.hashCode ^
+        prenom.hashCode ^
+        (telephone?.hashCode ?? 0) ^
         photoUrl.hashCode ^
-        telephone.hashCode ^
-        adresse.hashCode ^
+        ville.hashCode ^
         dateNaissance.hashCode ^
-        bio.hashCode ^
+        lieuDeNaissance.hashCode ^
         createdAt.hashCode ^
         updatedAt.hashCode;
   }
 
   @override
   String toString() {
-    return 'ProfilModel(id: $id, user: $user, photoUrl: $photoUrl, telephone: $telephone, adresse: $adresse, dateNaissance: $dateNaissance, bio: $bio, createdAt: $createdAt, updatedAt: $updatedAt)';
+    return 'ProfilModel(id: $id, userId: $userId, nom: $nom, prenom: $prenom, telephone: $telephone, photoUrl: $photoUrl, ville: $ville, dateNaissance: $dateNaissance, lieuDeNaissance: $lieuDeNaissance, createdAt: $createdAt, updatedAt: $updatedAt)';
   }
 }

@@ -41,14 +41,10 @@ class _RegisterViewState extends State<_RegisterView> {
   void _submitForm() {
     if (_formKey.currentState?.saveAndValidate() ?? false) {
       final values = _formKey.currentState!.value;
-      final nom = values['nom'] as String;
-      final prenom = values['prenom'] as String;
       final email = values['email'] as String;
       final motDePasse = values['motDePasse'] as String;
 
       context.read<RegisterCubit>().register(
-            nom: nom,
-            prenom: prenom,
             email: email,
             motDePasse: motDePasse,
           );
@@ -76,7 +72,6 @@ class _RegisterViewState extends State<_RegisterView> {
       body: BlocConsumer<RegisterCubit, RegisterState>(
         listener: (context, state) {
           if (state is RegisterSuccess) {
-            final email = state.user.email;
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
                 content:
@@ -85,7 +80,12 @@ class _RegisterViewState extends State<_RegisterView> {
               ),
             );
             if (!context.mounted) return;
-            context.push('/otp', extra: email);
+            context.push(
+              '/otp',
+              extra: {
+                'email': state.user.email,
+              },
+            );
           } else if (state is RegisterError) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
@@ -156,38 +156,7 @@ class _RegisterViewState extends State<_RegisterView> {
                       key: _formKey,
                       child: Column(
                         children: [
-                          FormBuilderTextField(
-                            name: 'nom',
-                            enabled: !isLoading,
-                            textCapitalization: TextCapitalization.words,
-                            decoration: _inputDecoration(
-                              label: 'Nom',
-                              hint: 'Entrez votre nom',
-                              icon: Icons.person_outline,
-                            ),
-                            validator: FormBuilderValidators.compose([
-                              FormBuilderValidators.required(
-                                errorText: 'Le nom est obligatoire',
-                              ),
-                            ]),
-                          ),
-                          const SizedBox(height: 16),
-                          FormBuilderTextField(
-                            name: 'prenom',
-                            enabled: !isLoading,
-                            textCapitalization: TextCapitalization.words,
-                            decoration: _inputDecoration(
-                              label: 'Prénom',
-                              hint: 'Entrez votre prénom',
-                              icon: Icons.person_outline_sharp,
-                            ),
-                            validator: FormBuilderValidators.compose([
-                              FormBuilderValidators.required(
-                                errorText: 'Le prénom est obligatoire',
-                              ),
-                            ]),
-                          ),
-                          const SizedBox(height: 16),
+
                           FormBuilderTextField(
                             name: 'email',
                             enabled: !isLoading,

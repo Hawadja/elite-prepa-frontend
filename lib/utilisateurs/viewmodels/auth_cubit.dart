@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../core/storage/token_storage.dart';
+import '../../core/utils/jwt_utils.dart';
 import '../models/user_model.dart';
 import '../repository/auth_repository.dart';
 
@@ -57,7 +58,17 @@ class AuthCubit extends Cubit<AuthState> {
   Future<void> checkAuthStatus() async {
     final token = await _tokenStorage.getAccessToken();
     if (token != null && token.isNotEmpty) {
-      emit(const Authenticated());
+      final userId = extractUserIdFromToken(token);
+      final now = DateTime.now();
+      emit(Authenticated(UserModel(
+        id: userId ?? '',
+        nom: '',
+        prenom: '',
+        email: '',
+        roleId: '',
+        createdAt: now,
+        updatedAt: now,
+      )));
     } else {
       emit(const Unauthenticated());
     }

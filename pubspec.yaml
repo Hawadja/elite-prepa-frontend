@@ -41,6 +41,8 @@ dependencies:
   flutter_secure_storage: ^9.0.0
   equatable: ^2.0.5
   go_router: ^14.0.0
+  image_picker: ^1.2.4
+  file_picker: ^11.0.3
 
 dependency_overrides:
   intl: ^0.20.3

@@ -44,10 +44,10 @@ class RegisterCubit extends Cubit<RegisterState> {
 
   RegisterCubit(this._authRepository) : super(const RegisterInitial());
 
-  /// Lance l'inscription d'un nouvel utilisateur
+  /// Lance l'inscription d'un nouvel utilisateur (avec email et mot de passe, nom et prenom optionnels)
   Future<void> register({
-    required String nom,
-    required String prenom,
+    String nom = '',
+    String prenom = '',
     required String email,
     required String motDePasse,
     String roleId = '',

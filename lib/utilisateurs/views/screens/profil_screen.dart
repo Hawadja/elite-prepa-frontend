@@ -22,11 +22,16 @@ class ProfilScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final effectiveUserId = userId.isNotEmpty
+        ? userId
+        : (context.read<AuthCubit>().state is Authenticated
+            ? (context.read<AuthCubit>().state as Authenticated).user?.id ?? ''
+            : '');
     return BlocProvider<ProfilCubit>(
       create: (context) => ProfilCubit(
         profilRepository ?? ProfilRepository(),
-      )..fetchProfil(userId),
-      child: _ProfilView(userId: userId),
+      )..fetchProfil(effectiveUserId),
+      child: _ProfilView(userId: effectiveUserId),
     );
   }
 }
@@ -52,10 +57,13 @@ class _ProfilViewState extends State<_ProfilView> {
       final values = _formKey.currentState!.value;
 
       final updatedProfil = currentProfil.copyWith(
-        telephone: values['telephone'] as String?,
-        adresse: values['adresse'] as String?,
-        bio: values['bio'] as String?,
-        photoUrl: values['photoUrl'] as String?,
+        nom: (values['nom'] as String?)?.trim(),
+        prenom: (values['prenom'] as String?)?.trim(),
+        telephone: (values['telephone'] as String?)?.trim(),
+        ville: (values['ville'] as String?)?.trim(),
+        lieuDeNaissance: (values['lieuDeNaissance'] as String?)?.trim(),
+        dateNaissance: values['dateNaissance'] as DateTime?,
+        photoUrl: (values['photoUrl'] as String?)?.trim(),
       );
 
       context
@@ -141,7 +149,9 @@ class _ProfilViewState extends State<_ProfilView> {
 
           if (state is ProfilLoaded) {
             final profil = state.profil;
-            final user = profil.user;
+            final authState = context.read<AuthCubit>().state;
+            final user = authState is Authenticated ? authState.user : null;
+            final fullName = '${profil.prenom} ${profil.nom}'.trim();
 
             return SingleChildScrollView(
               padding: const EdgeInsets.all(24.0),
@@ -186,21 +196,25 @@ class _ProfilViewState extends State<_ProfilView> {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    user != null ? '${user.prenom} ${user.nom}' : 'Utilisateur',
+                    fullName.isNotEmpty
+                        ? fullName
+                        : (user != null ? '${user.prenom} ${user.nom}'.trim() : 'Utilisateur'),
                     style: const TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
                       color: navyColor,
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    user?.email ?? '',
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: Colors.black54,
+                  if (user?.email != null && user!.email.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      user.email,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: Colors.black54,
+                      ),
                     ),
-                  ),
+                  ],
                   const SizedBox(height: 32),
 
                   // Mode affichage / Formulaire édition
@@ -239,6 +253,152 @@ class _ProfilViewState extends State<_ProfilView> {
             );
           }
 
+          if (state is ProfilNotFound) {
+            final notFoundFormKey = GlobalKey<FormBuilderState>();
+            return Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(24.0),
+                child: FormBuilder(
+                  key: notFoundFormKey,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.person_add_alt_1,
+                          size: 56, color: navyColor),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Complétez votre profil',
+                        style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: navyColor),
+                      ),
+                      const SizedBox(height: 24),
+                      FormBuilderTextField(
+                        name: 'nom',
+                        decoration: _inputDecoration(
+                            label: 'Nom', icon: Icons.person_outline),
+                        validator: FormBuilderValidators.required(
+                            errorText: 'Le nom est requis'),
+                      ),
+                      const SizedBox(height: 16),
+                      FormBuilderTextField(
+                        name: 'prenom',
+                        decoration: _inputDecoration(
+                            label: 'Prénom', icon: Icons.person_outline),
+                        validator: FormBuilderValidators.required(
+                            errorText: 'Le prénom est requis'),
+                      ),
+                      const SizedBox(height: 16),
+                      FormBuilderTextField(
+                        name: 'telephone',
+                        keyboardType: TextInputType.phone,
+                        decoration: _inputDecoration(
+                            label: 'Numéro de téléphone',
+                            icon: Icons.phone_outlined),
+                      ),
+                      const SizedBox(height: 16),
+                      FormBuilderTextField(
+                        name: 'ville',
+                        decoration: _inputDecoration(
+                            label: 'Ville',
+                            icon: Icons.location_city_outlined),
+                      ),
+                      const SizedBox(height: 16),
+                      FormBuilderTextField(
+                        name: 'lieuDeNaissance',
+                        decoration: _inputDecoration(
+                            label: 'Lieu de naissance',
+                            icon: Icons.place_outlined),
+                      ),
+                      const SizedBox(height: 16),
+                      FormBuilderField<DateTime>(
+                        name: 'dateNaissance',
+                        builder: (FormFieldState<DateTime> field) {
+                          final date = field.value;
+                          final dateStr = date != null
+                              ? '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}'
+                              : '';
+                          return InkWell(
+                            onTap: () async {
+                              final picked = await showDatePicker(
+                                context: context,
+                                initialDate: date ?? DateTime(2000, 1, 1),
+                                firstDate: DateTime(1920),
+                                lastDate: DateTime.now(),
+                              );
+                              if (picked != null) {
+                                field.didChange(picked);
+                              }
+                            },
+                            child: InputDecorator(
+                              decoration: _inputDecoration(
+                                label: 'Date de naissance',
+                                icon: Icons.cake_outlined,
+                              ).copyWith(
+                                suffixIcon: date != null
+                                    ? IconButton(
+                                        icon: const Icon(Icons.clear, size: 20),
+                                        onPressed: () => field.didChange(null),
+                                      )
+                                    : const Icon(Icons.calendar_today_outlined,
+                                        size: 20),
+                              ),
+                              child: Text(
+                                dateStr.isNotEmpty
+                                    ? dateStr
+                                    : 'Sélectionner une date',
+                                style: TextStyle(
+                                  color: dateStr.isNotEmpty
+                                      ? Colors.black87
+                                      : Colors.grey,
+                                  fontSize: 15,
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 24),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 52,
+                        child: ElevatedButton(
+                          onPressed: () {
+                            if (notFoundFormKey.currentState
+                                    ?.saveAndValidate() ??
+                                false) {
+                              final values =
+                                  notFoundFormKey.currentState!.value;
+                              context.read<ProfilCubit>().createProfil(
+                                    widget.userId,
+                                    (values['nom'] as String).trim(),
+                                    (values['prenom'] as String).trim(),
+                                    telephone: (values['telephone'] as String?)
+                                        ?.trim(),
+                                    ville:
+                                        (values['ville'] as String?)?.trim(),
+                                    lieuDeNaissance:
+                                        (values['lieuDeNaissance'] as String?)
+                                            ?.trim(),
+                                    dateNaissance:
+                                        values['dateNaissance'] as DateTime?,
+                                  );
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                              backgroundColor: navyColor),
+                          child: const Text('Créer mon profil',
+                              style: TextStyle(color: Colors.white)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          }
+
           return Center(
             child: ElevatedButton(
               onPressed: () =>
@@ -254,25 +414,59 @@ class _ProfilViewState extends State<_ProfilView> {
   }
 
   Widget _buildReadOnlyView(ProfilModel profil, UserModel? user) {
+    final phone = (profil.telephone != null && profil.telephone!.isNotEmpty)
+        ? profil.telephone
+        : (user?.telephone != null && user!.telephone!.isNotEmpty
+            ? user.telephone
+            : null);
+
     return Column(
       children: [
         _infoTile(
-          icon: Icons.phone_outlined,
-          title: 'Téléphone',
-          value: profil.telephone ?? 'Non renseigné',
+          icon: Icons.person_outline,
+          title: 'Nom',
+          value: profil.nom.isNotEmpty ? profil.nom : 'Non renseigné',
         ),
         const SizedBox(height: 14),
         _infoTile(
-          icon: Icons.location_on_outlined,
-          title: 'Adresse',
-          value: profil.adresse ?? 'Non renseignée',
+          icon: Icons.person_outline,
+          title: 'Prénom',
+          value: profil.prenom.isNotEmpty ? profil.prenom : 'Non renseigné',
         ),
+        if (phone != null && phone.isNotEmpty) ...[
+          const SizedBox(height: 14),
+          _infoTile(
+            icon: Icons.phone_outlined,
+            title: 'Numéro de téléphone',
+            value: phone,
+          ),
+        ],
         const SizedBox(height: 14),
         _infoTile(
-          icon: Icons.info_outline,
-          title: 'Bio',
-          value: profil.bio ?? 'Aucune biographie rédigée',
+          icon: Icons.location_city_outlined,
+          title: 'Ville',
+          value: (profil.ville != null && profil.ville!.isNotEmpty)
+              ? profil.ville!
+              : 'Non renseignée',
         ),
+        if (profil.lieuDeNaissance != null &&
+            profil.lieuDeNaissance!.isNotEmpty) ...[
+          const SizedBox(height: 14),
+          _infoTile(
+            icon: Icons.place_outlined,
+            title: 'Lieu de naissance',
+            value: profil.lieuDeNaissance!,
+          ),
+        ],
+        if (profil.dateNaissance != null) ...[
+          const SizedBox(height: 14),
+          _infoTile(
+            icon: Icons.cake_outlined,
+            title: 'Date de naissance',
+            value:
+                '${profil.dateNaissance!.day.toString().padLeft(2, '0')}/${profil.dateNaissance!.month.toString().padLeft(2, '0')}/${profil.dateNaissance!.year}',
+          ),
+        ],
       ],
     );
   }
@@ -281,13 +475,38 @@ class _ProfilViewState extends State<_ProfilView> {
     return FormBuilder(
       key: _formKey,
       initialValue: {
+        'nom': profil.nom,
+        'prenom': profil.prenom,
         'telephone': profil.telephone ?? '',
-        'adresse': profil.adresse ?? '',
-        'bio': profil.bio ?? '',
+        'ville': profil.ville ?? '',
+        'lieuDeNaissance': profil.lieuDeNaissance ?? '',
+        'dateNaissance': profil.dateNaissance,
         'photoUrl': profil.photoUrl ?? '',
       },
       child: Column(
         children: [
+          FormBuilderTextField(
+            name: 'nom',
+            decoration: _inputDecoration(
+              label: 'Nom',
+              icon: Icons.person_outline,
+            ),
+            validator: FormBuilderValidators.required(
+              errorText: 'Le nom est requis',
+            ),
+          ),
+          const SizedBox(height: 16),
+          FormBuilderTextField(
+            name: 'prenom',
+            decoration: _inputDecoration(
+              label: 'Prénom',
+              icon: Icons.person_outline,
+            ),
+            validator: FormBuilderValidators.required(
+              errorText: 'Le prénom est requis',
+            ),
+          ),
+          const SizedBox(height: 16),
           FormBuilderTextField(
             name: 'telephone',
             keyboardType: TextInputType.phone,
@@ -298,20 +517,62 @@ class _ProfilViewState extends State<_ProfilView> {
           ),
           const SizedBox(height: 16),
           FormBuilderTextField(
-            name: 'adresse',
+            name: 'ville',
             decoration: _inputDecoration(
-              label: 'Adresse',
-              icon: Icons.location_on_outlined,
+              label: 'Ville',
+              icon: Icons.location_city_outlined,
             ),
           ),
           const SizedBox(height: 16),
           FormBuilderTextField(
-            name: 'bio',
-            maxLines: 3,
+            name: 'lieuDeNaissance',
             decoration: _inputDecoration(
-              label: 'Biographie',
-              icon: Icons.info_outline,
+              label: 'Lieu de naissance',
+              icon: Icons.place_outlined,
             ),
+          ),
+          const SizedBox(height: 16),
+          FormBuilderField<DateTime>(
+            name: 'dateNaissance',
+            builder: (FormFieldState<DateTime> field) {
+              final date = field.value;
+              final dateStr = date != null
+                  ? '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}'
+                  : '';
+              return InkWell(
+                onTap: () async {
+                  final picked = await showDatePicker(
+                    context: context,
+                    initialDate: date ?? DateTime(2000, 1, 1),
+                    firstDate: DateTime(1920),
+                    lastDate: DateTime.now(),
+                  );
+                  if (picked != null) {
+                    field.didChange(picked);
+                  }
+                },
+                child: InputDecorator(
+                  decoration: _inputDecoration(
+                    label: 'Date de naissance',
+                    icon: Icons.cake_outlined,
+                  ).copyWith(
+                    suffixIcon: date != null
+                        ? IconButton(
+                            icon: const Icon(Icons.clear, size: 20),
+                            onPressed: () => field.didChange(null),
+                          )
+                        : const Icon(Icons.calendar_today_outlined, size: 20),
+                  ),
+                  child: Text(
+                    dateStr.isNotEmpty ? dateStr : 'Sélectionner une date',
+                    style: TextStyle(
+                      color: dateStr.isNotEmpty ? Colors.black87 : Colors.grey,
+                      fontSize: 15,
+                    ),
+                  ),
+                ),
+              );
+            },
           ),
           const SizedBox(height: 16),
           FormBuilderTextField(
@@ -321,9 +582,12 @@ class _ProfilViewState extends State<_ProfilView> {
               icon: Icons.image_outlined,
             ),
             validator: FormBuilderValidators.compose([
-              FormBuilderValidators.url(
-                errorText: 'Veuillez entrer une URL valide',
-              ),
+              (value) {
+                if (value == null || value.trim().isEmpty) return null;
+                return FormBuilderValidators.url(
+                  errorText: 'Veuillez entrer une URL valide',
+                )(value);
+              },
             ]),
           ),
         ],

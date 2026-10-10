@@ -3,7 +3,22 @@ import 'package:flutter/foundation.dart';
 import '../errors/app_exception.dart';
 import '../storage/token_storage.dart';
 
-const String apiBaseUrl = 'http://10.147.86.32:3000/api/v1';
+String _getDefaultApiBaseUrl() {
+  const fromEnv = String.fromEnvironment('API_BASE_URL');
+  if (fromEnv.isNotEmpty) return fromEnv;
+
+  if (kIsWeb) {
+    return 'http://localhost:3000/api/v1';
+  }
+  try {
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      return 'http://10.147.86.32:3000/api/v1';
+    }
+  } catch (_) {}
+  return 'http://127.0.0.1:3000/api/v1';
+}
+
+final String apiBaseUrl = _getDefaultApiBaseUrl();
 
 class DioClient {
   late final Dio _dio;

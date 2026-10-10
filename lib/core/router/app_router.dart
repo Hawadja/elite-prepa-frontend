@@ -69,7 +69,15 @@ class AppRouter {
       GoRoute(
         path: '/otp',
         builder: (context, state) {
-          final email = state.extra as String? ?? '';
+          final extra = state.extra;
+          if (extra is Map<String, dynamic>) {
+            return OtpScreen(
+              email: extra['email']?.toString() ?? '',
+              nom: extra['nom']?.toString() ?? '',
+              prenom: extra['prenom']?.toString() ?? '',
+            );
+          }
+          final email = extra as String? ?? '';
           return OtpScreen(email: email);
         },
       ),
@@ -91,7 +99,13 @@ class AppRouter {
       GoRoute(
         path: '/profil',
         builder: (context, state) {
-          final userId = state.extra as String? ?? '';
+          String userId = state.extra as String? ?? '';
+          if (userId.isEmpty) {
+            final authState = context.read<AuthCubit>().state;
+            if (authState is Authenticated) {
+              userId = authState.user?.id ?? '';
+            }
+          }
           return ProfilScreen(userId: userId);
         },
       ),
@@ -119,7 +133,10 @@ class HomeScreen extends StatelessWidget {
           IconButton(
             icon: const Icon(Icons.person, color: goldColor),
             onPressed: () {
-              context.push('/profil');
+              final authState = context.read<AuthCubit>().state;
+              final userId =
+                  authState is Authenticated ? authState.user?.id : null;
+              context.push('/profil', extra: userId);
             },
             tooltip: 'Profil',
           ),
@@ -187,7 +204,10 @@ class HomeScreen extends StatelessWidget {
                 subtitle: const Text('Consulter et modifier mes informations'),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () {
-                  context.push('/profil');
+                  final authState = context.read<AuthCubit>().state;
+                  final userId =
+                      authState is Authenticated ? authState.user?.id : null;
+                  context.push('/profil', extra: userId);
                 },
                 tileColor: Colors.white,
                 shape: RoundedRectangleBorder(

@@ -5,6 +5,7 @@ import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../repository/auth_repository.dart';
+import '../../viewmodels/auth_cubit.dart';
 import '../../viewmodels/login_cubit.dart';
 
 class LoginScreen extends StatelessWidget {
@@ -54,6 +55,7 @@ class _LoginViewState extends State<_LoginView> {
       body: BlocConsumer<LoginCubit, LoginState>(
         listener: (context, state) {
           if (state is LoginSuccess) {
+            context.read<AuthCubit>().setAuthenticated(state.user);
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
                 content: Text('Connexion réussie ! Bienvenue.'),

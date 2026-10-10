@@ -16,7 +16,7 @@ class ElitePrepaApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider<AuthCubit>(
-      create: (context) => AuthCubit(),
+      create: (context) => AuthCubit()..checkAuthStatus(),
       child: MaterialApp.router(
         debugShowCheckedModeBanner: false,
         title: 'Elite Prépa',

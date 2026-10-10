@@ -34,28 +34,34 @@ class AuthRepository {
       final response = await _dioClient.dio.post(
         '/users/create',
         data: {
-          'nom': user.nom,
-          'prenom': user.prenom,
           'email': user.email,
           'motDePasse': motDePasse,
-          if (user.roleId.isNotEmpty) 'roleId': user.roleId,
         },
       );
 
       final data = response.data;
       if (data is Map<String, dynamic>) {
         if (data['user'] is Map<String, dynamic>) {
-          return UserModel.fromJson(data['user'] as Map<String, dynamic>);
+          final returnedUser =
+              UserModel.fromJson(data['user'] as Map<String, dynamic>);
+          return returnedUser.copyWith(
+            nom: returnedUser.nom.isNotEmpty ? returnedUser.nom : user.nom,
+            prenom:
+                returnedUser.prenom.isNotEmpty ? returnedUser.prenom : user.prenom,
+          );
         } else if (data['data'] is Map<String, dynamic>) {
           final innerData = data['data'] as Map<String, dynamic>;
           if (innerData['user'] is Map<String, dynamic>) {
-            return UserModel.fromJson(
-                innerData['user'] as Map<String, dynamic>);
+            final returnedUser =
+                UserModel.fromJson(innerData['user'] as Map<String, dynamic>);
+            return returnedUser.copyWith(
+              nom: returnedUser.nom.isNotEmpty ? returnedUser.nom : user.nom,
+              prenom: returnedUser.prenom.isNotEmpty
+                  ? returnedUser.prenom
+                  : user.prenom,
+            );
           }
-          return UserModel.fromJson(innerData);
         }
-        // If backend returns only message or basic user data
-        return UserModel.fromJson(data);
       }
 
       return user;
