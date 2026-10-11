@@ -93,6 +93,10 @@ class AppRoutes {
         );
 
       case addEditSujet:
+      return MaterialPageRoute(
+          builder: (_) => const AddEditFicheView(),
+        );
+
 
       case sujetDetail:
         final args = settings.arguments as Map<String, dynamic>?;

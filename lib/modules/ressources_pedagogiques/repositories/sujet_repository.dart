@@ -1,10 +1,10 @@
-import 'dart:convert';
+﻿import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
 import '../models/sujet.dart';
 
-/// RÃ©sultat paginÃ© retournÃ© par l'API des sujets.
+/// RÃƒÂ©sultat paginÃƒÂ© retournÃƒÂ© par l'API des sujets.
 class SujetsPage {
   final List<Sujet> items;
   final int page;
@@ -25,7 +25,7 @@ class SujetsPage {
     final dynamic pagination = json['pagination'];
 
     if (data is! List || pagination is! Map<String, dynamic>) {
-      throw const FormatException('Format de rÃ©ponse des sujets invalide.');
+      throw const FormatException('Format de rÃƒÂ©ponse des sujets invalide.');
     }
 
     return SujetsPage(
@@ -52,7 +52,7 @@ class SujetsPage {
 }
 
 class SujetRepository {
-  static const String baseUrl = 'http://10.2.7.69:3000';
+  static const String baseUrl = 'http://192.168.137.1:3000';
 
   /// Charge une page de sujets depuis le backend.
   Future<SujetsPage> getSujetsPage({
@@ -104,7 +104,7 @@ class SujetRepository {
 
       if (decoded is! Map<String, dynamic>) {
         throw const FormatException(
-          'Le serveur a renvoyÃ© une rÃ©ponse invalide.',
+          'Le serveur a renvoyÃƒÂ© une rÃƒÂ©ponse invalide.',
         );
       }
 
@@ -114,7 +114,7 @@ class SujetRepository {
     }
   }
 
-  /// CompatibilitÃ© avec les Ã©ventuels Ã©crans utilisant dÃ©jÃ  getSujets().
+  /// CompatibilitÃƒÂ© avec les ÃƒÂ©ventuels ÃƒÂ©crans utilisant dÃƒÂ©jÃƒÂ  getSujets().
   Future<List<Sujet>> getSujets({
     String? matiere,
     String? concours,
@@ -139,7 +139,7 @@ class SujetRepository {
     return result.items;
   }
 
-  /// RÃ©cupÃ¨re un sujet par son identifiant.
+  /// RÃƒÂ©cupÃƒÂ¨re un sujet par son identifiant.
   Future<Sujet> getSujetById(String id) async {
     if (id.trim().isEmpty) {
       throw ArgumentError('Identifiant du sujet manquant.');
@@ -166,3 +166,4 @@ class SujetRepository {
     return Sujet.fromJson(decoded);
   }
 }
+

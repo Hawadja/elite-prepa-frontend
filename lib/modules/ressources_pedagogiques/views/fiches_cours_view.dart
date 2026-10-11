@@ -951,112 +951,128 @@ List<FicheItem> get _filteredFiches {
   void _showMatiereFilter(
     BuildContext context,
     bool isDark,
-    ) {
+  ) {
     showModalBottomSheet(
-    context: context,
-    backgroundColor: isDark
-    ? const Color(0xFF102542)
-    : Colors.white,
-    shape: const RoundedRectangleBorder(
-    borderRadius: BorderRadius.vertical(
-    top: Radius.circular(18),
-    ),
-    ),
-    builder: (sheetContext) {
-    return SafeArea(
-    child: Padding(
-    padding: const EdgeInsets.fromLTRB(
-    20,
-    18,
-    20,
-    20,
-    ),
-    child: Column(
-    mainAxisSize: MainAxisSize.min,
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-    Text(
-    'Filtrer par matière',
-    style: TextStyle(
-    fontSize: 17,
-    fontWeight: FontWeight.bold,
-    color: isDark
-    ? Colors.white
-    : primaryColor,
-    ),
-    ),
-    const SizedBox(height: 12),
-
-    
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('Toutes les matières'),
-                leading: Icon(
-                  _selectedMatiereId == null
-                      ? Icons.radio_button_checked
-                      : Icons.radio_button_off,
-                  color: _selectedMatiereId == null
-                      ? primaryColor
-                      : Colors.grey,
-                ),
-                onTap: () {
-                  Navigator.pop(sheetContext);
-                  _appliquerFiltreMatiere(null);
-                },
-              ),
-
-              if (_matieres.isEmpty)
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 12,
-                  ),
-                  child: Text(
-                    'Aucune matière chargée.',
-                    style: TextStyle(
-                      color: isDark
-                          ? Colors.white70
-                          : Colors.black54,
-                    ),
-                  ),
-                )
-              else
-                ..._matieres.map(
-                  (matiere) => ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: Text(
-                      matiere.nom,
-                      style: TextStyle(
-                        color: isDark
-                            ? Colors.white
-                            : Colors.black87,
-                      ),
-                    ),
-                    subtitle: matiere.code.isNotEmpty
-                        ? Text(matiere.code)
-                        : null,
-                    leading: Icon(
-                      _selectedMatiereId == matiere.id
-                          ? Icons.radio_button_checked
-                          : Icons.radio_button_off,
-                      color:
-                          _selectedMatiereId == matiere.id
-                              ? primaryColor
-                              : Colors.grey,
-                    ),
-                    onTap: () {
-                      Navigator.pop(sheetContext);
-                      _appliquerFiltreMatiere(matiere);
-                    },
-                  ),
-                ),
-            ],
-          ),
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: isDark
+          ? const Color(0xFF102542)
+          : Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(18),
         ),
-      );
-    },
+      ),
+      builder: (sheetContext) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(
+              20,
+              18,
+              20,
+              12,
+            ),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxHeight:
+                    MediaQuery.of(sheetContext).size.height * 0.75,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Filtrer par matière',
+                    style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.bold,
+                      color: isDark
+                          ? Colors.white
+                          : primaryColor,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
 
+                  Flexible(
+                    child: ListView(
+                      shrinkWrap: true,
+                      children: [
+                        ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          title: const Text(
+                            'Toutes les matières',
+                          ),
+                          leading: Icon(
+                            _selectedMatiereId == null
+                                ? Icons.radio_button_checked
+                                : Icons.radio_button_off,
+                            color: _selectedMatiereId == null
+                                ? primaryColor
+                                : Colors.grey,
+                          ),
+                          onTap: () {
+                            Navigator.pop(sheetContext);
+                            _appliquerFiltreMatiere(null);
+                          },
+                        ),
+
+                        if (_matieres.isEmpty)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(
+                              vertical: 12,
+                            ),
+                            child: Text(
+                              'Aucune matière chargée.',
+                              style: TextStyle(
+                                color: isDark
+                                    ? Colors.white70
+                                    : Colors.black54,
+                              ),
+                            ),
+                          )
+                        else
+                          ..._matieres.map(
+                            (matiere) => ListTile(
+                              contentPadding: EdgeInsets.zero,
+                              title: Text(
+                                matiere.nom,
+                                style: TextStyle(
+                                  color: isDark
+                                      ? Colors.white
+                                      : Colors.black87,
+                                ),
+                              ),
+                              subtitle: matiere.code.isNotEmpty
+                                  ? Text(matiere.code)
+                                  : null,
+                              leading: Icon(
+                                _selectedMatiereId == matiere.id
+                                    ? Icons.radio_button_checked
+                                    : Icons.radio_button_off,
+                                color:
+                                    _selectedMatiereId == matiere.id
+                                        ? primaryColor
+                                        : Colors.grey,
+                              ),
+                              onTap: () {
+                                Navigator.pop(sheetContext);
+                                _appliquerFiltreMatiere(matiere);
+                              },
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
+
+
 
   Future<void> _appliquerFiltreMatiere(
     Matiere? matiere,
