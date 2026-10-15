@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+
 import '../../../core/routes/app_routes.dart';
 
 class RessourcesDashboardView extends StatefulWidget {
@@ -15,7 +17,7 @@ class RessourcesDashboardView extends StatefulWidget {
 
 class _RessourcesDashboardViewState
     extends State<RessourcesDashboardView> {
-  int _currentIndex = 1;
+  int _currentIndex = 0;
 
   @override
   Widget build(BuildContext context) {
@@ -128,10 +130,7 @@ appBar: AppBar(
                     value: '8',
                     icon: Icons.menu_book_outlined,
                     onTap: () {
-                      Navigator.pushNamed(
-                        context,
-                        AppRoutes.matieres,
-                      );
+                      context.push(AppRoutes.matieres);
                     },
                   ),
 
@@ -140,10 +139,7 @@ appBar: AppBar(
                     value: '42',
                     icon: Icons.description_outlined,
                     onTap: () {
-                      Navigator.pushNamed(
-                        context,
-                        AppRoutes.fichesCours,
-                      );
+                      context.push(AppRoutes.fichesCours);
                     },
                   ),
 
@@ -152,11 +148,8 @@ appBar: AppBar(
                     value: '27',
                     icon: Icons.assignment_outlined,
                     onTap: () {
-                    Navigator.pushNamed(
-                      context,
-                      AppRoutes.sujetsGestion,
-                    );
-                  },
+                      context.push(AppRoutes.sujetsGestion);
+                    },
                   ),
 
                   _StatCard(
@@ -164,12 +157,9 @@ appBar: AppBar(
                     value: '19',
                     icon: Icons.check_circle_outline,
                     iconColor: Color(0xFFF0A500),
-                     onTap: () {
-                    Navigator.pushNamed(
-                      context,
-                      AppRoutes.corriges,
-                    );
-                  },
+                    onTap: () {
+                      context.push(AppRoutes.corriges);
+                    },
                   ),
                 ],
               ),
@@ -184,10 +174,7 @@ appBar: AppBar(
                 height: 48,
                 child: OutlinedButton.icon(
                   onPressed: () {
-                    Navigator.pushNamed(
-                      context,
-                      AppRoutes.rechercheAvancee,
-                    );
+                    context.push(AppRoutes.rechercheAvancee);
                   },
                   icon: const Icon(
                     Icons.manage_search,
@@ -260,10 +247,7 @@ appBar: AppBar(
                 height: 44,
                 child: ElevatedButton(
                   onPressed: () {
-                    Navigator.pushNamed(
-                      context,
-                      AppRoutes.toutesRessources,
-                    );
+                    context.push(AppRoutes.toutesRessources);
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor:
@@ -295,10 +279,24 @@ appBar: AppBar(
         selectedIndex: _currentIndex,
 
         onDestinationSelected: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
-        },
+  switch (index) {
+    case 0:
+      context.go(AppRoutes.ressourcesDashboard);
+      break;
+
+    case 1:
+      context.go(AppRoutes.fichesCours);
+      break;
+
+    case 2:
+      context.go(AppRoutes.sujetsGestion);
+      break;
+
+    case 3:
+      context.push(AppRoutes.profil);
+      break;
+  }
+},
 
         backgroundColor: isDark
             ? const Color(0xFF081B32)

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../core/routes/app_routes.dart';
 import '../../../core/theme/app_colors.dart';
 import 'telecharger_corrige_view.dart';
+import 'package:go_router/go_router.dart';
 
 class SujetConcoursItem {
   final String id;
@@ -112,35 +113,21 @@ class _SujetsConcoursViewState extends State<SujetsConcoursView> {
   // ============================================================
 
   void _onNavigationSelected(int index) {
-    if (index == _currentIndex) {
-      return;
-    }
-
     switch (index) {
       case 0:
-        Navigator.pushNamedAndRemoveUntil(
-          context,
-          AppRoutes.ressourcesDashboard,
-          (route) => false,
-        );
+        context.go(AppRoutes.ressourcesDashboard);
         break;
 
       case 1:
-        setState(() {
-          _currentIndex = index;
-        });
+        context.go(AppRoutes.fichesCours);
         break;
 
       case 2:
-        setState(() {
-          _currentIndex = index;
-        });
+        context.go(AppRoutes.sujetsGestion);
         break;
 
       case 3:
-        setState(() {
-          _currentIndex = index;
-        });
+        context.push(AppRoutes.profil);
         break;
     }
   }

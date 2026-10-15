@@ -5,6 +5,7 @@ import 'dart:async';
 import '../../../core/routes/app_routes.dart';
 import '../viewmodels/sujet_viewmodel.dart';
 import 'telecharger_corrige_view.dart';
+import 'package:go_router/go_router.dart';
 
 class SujetGestionItem {
   final String id;
@@ -339,15 +340,28 @@ class _SujetsGestionViewState extends State<SujetsGestionView> {
   // NAVIGATION
   // ============================================================
 
-  void _onNavigationSelected(int index) {
-    if (index == _currentIndex) {
-      return;
-    }
 
-    setState(() {
-      _currentIndex = index;
-    });
+  void _onNavigationSelected(int index) {
+    switch (index) {
+      case 0:
+        context.go(AppRoutes.ressourcesDashboard);
+        break;
+
+      case 1:
+        context.go(AppRoutes.fichesCours);
+        break;
+
+      case 2:
+        // Nous sommes déjà sur l'écran de gestion des sujets.
+        break;
+
+      case 3:
+        context.push(AppRoutes.profil);
+        break;
+    }
   }
+
+
 
   // ============================================================
   // BUILD

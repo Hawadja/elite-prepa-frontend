@@ -7,6 +7,8 @@ import 'fiche_detail_view.dart';
 import '../viewmodels/fiche_cours_viewmodel.dart';
 import '../models/matiere.dart';
 import '../repositories/matiere_repository.dart';
+import 'package:go_router/go_router.dart';
+
 
 class FicheItem {
   final String id;
@@ -244,15 +246,27 @@ List<FicheItem> get _filteredFiches {
   // ============================================================
 
   void _onNavigationSelected(int index) {
-    if (index == _currentIndex) return;
+  switch (index) {
+    case 0:
+      // Retour au dashboard
+      context.go(AppRoutes.ressourcesDashboard);
+      break;
 
-    setState(() {
-      _currentIndex = index;
-    });
+    case 1:
+      // Déjà sur l'écran Fiches de cours
+      break;
 
-    // Pour l'instant, les autres destinations ne sont pas encore
-    // connectées à leurs écrans.
+    case 2:
+      // Ouvrir les sujets de concours
+      context.push(AppRoutes.sujetsGestion);
+      break;
+
+    case 3:
+      // Ouvrir le profil
+      context.push(AppRoutes.profil);
+      break;
   }
+}
 
   @override
   Widget build(BuildContext context) {
