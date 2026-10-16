@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:file_picker/file_picker.dart';
 
 class AddFicheView extends StatefulWidget {
   const AddFicheView({super.key});
@@ -23,8 +24,10 @@ class _AddFicheViewState extends State<AddFicheView> {
   // FICHIER
   // ============================================================
 
-  String? _fileName = 'limites_continuite.pdf';
-  String? _fileSize = '2,4 Mo';
+  String? _fileName;
+  String? _fileSize;
+
+  PlatformFile? _selectedFile;
 
   bool _isUploading = false;
 
@@ -32,17 +35,72 @@ class _AddFicheViewState extends State<AddFicheView> {
   // SÉLECTION DU FICHIER
   // ============================================================
 
-  void _pickFile() {
-    // Simulation temporaire.
-    // Plus tard : file_picker.
-    setState(() {
-      _fileName = 'limites_continuite.pdf';
-      _fileSize = '2,4 Mo';
-    });
+  Future<void> _pickFile() async {
+    try {
+      final result = await FilePicker.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf'],
+        allowMultiple: false,
+        withData: true,
+      );
+
+      if (result == null || result.files.isEmpty) {
+        // L'utilisateur a annulé la sélection.
+        return;
+      }
+
+      final file = result.files.single;
+
+      // Vérifier que le fichier ne dépasse pas 20 Mo.
+      const maxSize = 10 * 1024 * 1024;
+
+      if (file.size > maxSize) {
+        if (!mounted) return;
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Le fichier PDF ne doit pas dépasser 20 Mo.',
+            ),
+            backgroundColor: Colors.red,
+          ),
+        );
+
+        return;
+      }
+
+      if (!mounted) return;
+
+      setState(() {
+        _selectedFile = file;
+        _fileName = file.name;
+        _fileSize = _formatFileSize(file.size);
+      });
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Impossible de sélectionner le fichier : $e',
+          ),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  String _formatFileSize(int bytes) {
+    if (bytes < 1024 * 1024) {
+      return '${(bytes / 1024).toStringAsFixed(1)} Ko';
+    }
+
+    return '${(bytes / (1024 * 1024)).toStringAsFixed(2)} Mo';
   }
 
   void _removeFile() {
     setState(() {
+      _selectedFile = null;
       _fileName = null;
       _fileSize = null;
     });
@@ -396,14 +454,15 @@ class _AddFicheViewState extends State<AddFicheView> {
                 width: double.infinity,
                 height: 50,
                 child: ElevatedButton.icon(
-                  onPressed:
-                      _fileName == null || _isUploading
-                          ? null
-                          : () {
-                              setState(() {
-                                _isUploading = true;
-                              });
-                            },
+                  onPressed: _selectedFile == null || _isUploading
+                    ? null
+                    : () {
+                        Navigator.pop(context, {
+                          'name': _selectedFile!.name,
+                          'size': _selectedFile!.size,
+                          'file': _selectedFile,
+                        });
+                      },
                   icon: const Icon(
                     Icons.add,
                     size: 20,

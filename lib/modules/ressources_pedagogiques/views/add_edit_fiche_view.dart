@@ -1,5 +1,12 @@
 import 'package:flutter/material.dart';
+
+import '../../../core/storage/token_storage.dart';
+import '../repositories/fiche_cours_repository.dart';
 import 'add_fiche_view.dart';
+import 'package:file_picker/file_picker.dart';
+import '../models/matiere.dart';
+import '../repositories/matiere_repository.dart';
+
 class AddEditFicheView extends StatefulWidget {
   final String? id;
   final String? titre;
@@ -27,11 +34,29 @@ class _AddEditFicheViewState extends State<AddEditFicheView> {
   static const Color accentColor = Color(0xFFF0A500);
   static const Color lightBackground = Color(0xFFF5F5F5);
 
+  final FicheCoursRepository _ficheCoursRepository =
+    FicheCoursRepository();
+
+  final TokenStorage _tokenStorage = TokenStorage();
+
   final _formKey = GlobalKey<FormState>();
 
   late TextEditingController _titreController;
-  late TextEditingController _matiereController;
   late TextEditingController _descriptionController;
+  late TextEditingController _concoursController;
+  late TextEditingController _anneeController;
+
+  String? _matiereSelectionnee;
+  PlatformFile? _selectedFile;
+
+  final MatiereRepository _matiereRepository =
+      MatiereRepository();
+
+  List<Matiere> _matieres = [];
+
+  bool _chargementMatieres = true;
+  String? _erreurMatieres;
+
 
   String? _selectedFileName;
 
@@ -46,42 +71,78 @@ class _AddEditFicheViewState extends State<AddEditFicheView> {
       text: widget.titre ?? '',
     );
 
-    _matiereController = TextEditingController(
-      text: widget.matiere ?? 'Mathématiques',
-    );
+    _concoursController = TextEditingController();
+    _anneeController = TextEditingController();
 
     _descriptionController = TextEditingController(
       text: widget.description ?? '',
     );
 
     _selectedFileName = widget.nomFichier;
+    _chargerMatieres();
   }
 
   @override
   void dispose() {
     _titreController.dispose();
-    _matiereController.dispose();
     _descriptionController.dispose();
+    _concoursController.dispose();
+    _anneeController.dispose();
     super.dispose();
   }
 
-Future<void> _pickPDFFile() async {
-  final result = await Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (_) => const AddFicheView(),
-    ),
-  );
+  Future<void> _chargerMatieres() async {
+    try {
+      final matieres = await _matiereRepository.getMatieres();
 
-  if (result != null && mounted) {
+      if (!mounted) return;
+
+      setState(() {
+        _matieres = matieres;
+        _chargementMatieres = false;
+        _erreurMatieres = null;
+      });
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        _chargementMatieres = false;
+        _erreurMatieres = 'Impossible de charger les matières.';
+      });
+    }
+  }
+
+  Future<void> _pickPDFFile() async {
+    final result = await Navigator.push<Map<String, dynamic>>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const AddFicheView(),
+      ),
+    );
+
+    if (result == null || !mounted) return;
+
+    final file = result['file'];
+
+    if (file is! PlatformFile) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Impossible de récupérer le fichier PDF.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     setState(() {
-      _selectedFileName = result['name'] as String?;
+      _selectedFile = file;
+      _selectedFileName = file.name;
     });
   }
-}
 
   void _removeSelectedFile() {
     setState(() {
+      _selectedFile = null;
       _selectedFileName = null;
     });
   }
@@ -91,26 +152,82 @@ Future<void> _pickPDFFile() async {
       return;
     }
 
+    if (_matiereSelectionnee == null ||
+        _matiereSelectionnee!.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Veuillez sélectionner une matière.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    if (!widget.isEditMode && _selectedFile == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Veuillez sélectionner le PDF de la fiche.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    if (!widget.isEditMode &&
+        (_concoursController.text.trim().isEmpty ||
+            _anneeController.text.trim().isEmpty)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Veuillez renseigner le concours et l’année académique.',
+          ),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     setState(() {
       _isSubmitting = true;
     });
 
     try {
-      // TODO : connexion API/backend
+      final token = await _tokenStorage.getAccessToken();
 
-      await Future.delayed(
-        const Duration(milliseconds: 500),
-      );
+      if (token == null || token.trim().isEmpty) {
+        throw Exception(
+          'Session expirée ou absente. Reconnecte-toi.',
+        );
+      }
+
+      if (widget.isEditMode) {
+        await _ficheCoursRepository.updateFicheCours(
+          widget.id!,
+          titre: _titreController.text.trim(),
+          description: _descriptionController.text.trim(),
+          token: token,
+        );
+      } else {
+        await _ficheCoursRepository.createFicheCours(
+          titre: _titreController.text.trim(),
+          description: _descriptionController.text.trim(),
+          matiereId: _matiereSelectionnee!,
+          concours: _concoursController.text.trim(),
+          anneeAcademique: _anneeController.text.trim(),
+          fichier: _selectedFile!,
+          token: token,
+        );
+      }
 
       if (!mounted) return;
 
-      final message = widget.isEditMode
-          ? 'Fiche de cours modifiée avec succès'
-          : 'Fiche de cours ajoutée avec succès';
-
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(message),
+          content: Text(
+            widget.isEditMode
+                ? 'Fiche de cours modifiée avec succès.'
+                : 'Fiche de cours ajoutée avec succès.',
+          ),
           backgroundColor: Colors.green,
           behavior: SnackBarBehavior.floating,
         ),
@@ -122,7 +239,9 @@ Future<void> _pickPDFFile() async {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Erreur : ${e.toString()}'),
+          content: Text(
+            e.toString().replaceFirst('Exception: ', ''),
+          ),
           backgroundColor: Colors.red,
           behavior: SnackBarBehavior.floating,
         ),
@@ -135,6 +254,7 @@ Future<void> _pickPDFFile() async {
       }
     }
   }
+
 
   void _onNavigationSelected(int index) {
     if (index == _currentIndex) {
@@ -281,23 +401,86 @@ Future<void> _pickPDFFile() async {
 
                 const SizedBox(height: 12),
 
-                _buildFormField(
-                  label: 'Matière',
-                  hintText: 'Mathématiques',
-                  controller: _matiereController,
-                  cardColor: cardColor,
-                  textColor: textColor,
-                  validator: (value) {
-                    if (value == null ||
-                        value.trim().isEmpty) {
-                      return 'Veuillez préciser la matière';
-                    }
-
-                    return null;
-                  },
+                Text(
+                  'Matière *',
+                  style: TextStyle(
+                    color: textColor,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
 
-                const SizedBox(height: 12),
+                  const SizedBox(height: 8),
+
+                  if (_chargementMatieres)
+                    const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(12),
+                        child: CircularProgressIndicator(),
+                      ),
+                    )
+                  else if (_erreurMatieres != null)
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _erreurMatieres!,
+                          style: const TextStyle(color: Colors.red),
+                        ),
+                        TextButton.icon(
+                          onPressed: () {
+                            setState(() {
+                              _chargementMatieres = true;
+                              _erreurMatieres = null;
+                            });
+
+                            _chargerMatieres();
+                          },
+                          icon: const Icon(Icons.refresh),
+                          label: const Text('Réessayer'),
+                        ),
+                      ],
+                    )
+                  else if (_matieres.isEmpty)
+                    const Text(
+                      'Aucune matière disponible.',
+                      style: TextStyle(color: Colors.orange),
+                    )
+                  else
+                    DropdownButtonFormField<String>(
+                      initialValue: _matiereSelectionnee,
+                      isExpanded: true,
+                      decoration: InputDecoration(
+                        hintText: 'Sélectionner une matière',
+                        prefixIcon: const Icon(Icons.school_outlined),
+                        filled: true,
+                        fillColor: cardColor,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      items: _matieres.map((matiere) {
+                        return DropdownMenuItem<String>(
+                          value: matiere.id,
+                          child: Text(matiere.nom),
+                        );
+                      }).toList(),
+                      onChanged: (value) {
+                        setState(() {
+                          _matiereSelectionnee = value;
+                        });
+                      },
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Veuillez sélectionner une matière.';
+                        }
+
+                        return null;
+                      },
+                    ),
+
+                  const SizedBox(height: 12),
+
 
                 _buildFormField(
                   label: 'Description',
@@ -310,14 +493,46 @@ Future<void> _pickPDFFile() async {
                   maxLines: 4,
                 ),
 
-                const SizedBox(height: 12),
+            const SizedBox(height: 12),
 
-                _buildPdfPicker(
-                  cardColor: cardColor,
-                  textColor: textColor,
-                  secondaryTextColor:
-                      secondaryTextColor,
-                ),
+            _buildFormField(
+              label: 'Concours',
+              hintText: 'Ex. : Concours ENS',
+              controller: _concoursController,
+              cardColor: cardColor,
+              textColor: textColor,
+              validator: (value) {
+                if (value == null || value.trim().isEmpty) {
+                  return 'Veuillez renseigner le concours.';
+                }
+                return null;
+              },
+            ),
+
+            const SizedBox(height: 12),
+
+            _buildFormField(
+              label: 'Année académique',
+              hintText: 'Ex. : 2025-2026',
+              controller: _anneeController,
+              cardColor: cardColor,
+              textColor: textColor,
+              validator: (value) {
+                if (value == null || value.trim().isEmpty) {
+                  return 'Veuillez renseigner l’année académique.';
+                }
+                return null;
+              },
+            ),
+
+            const SizedBox(height: 12),
+
+            _buildPdfPicker(
+              cardColor: cardColor,
+              textColor: textColor,
+              secondaryTextColor: secondaryTextColor,
+            ),
+
 
                 const SizedBox(height: 24),
 

@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import '../../../core/routes/app_routes.dart';
 import '../models/matiere.dart';
 import '../viewmodels/matiere_viewmodel.dart';
+import 'package:go_router/go_router.dart';
+import '../repositories/matiere_repository.dart';
+import '../../../core/storage/token_storage.dart';
 
 class MatieresView extends StatefulWidget {
   const MatieresView({super.key});
@@ -118,8 +121,7 @@ class _MatieresViewState extends State<MatieresView> {
             icon: const Icon(Icons.add),
             color: accentColor,
             onPressed: () async {
-              final result = await Navigator.pushNamed(
-                context,
+              final result = await context.push(
                 AppRoutes.addEditMatiere,
               );
 
@@ -350,10 +352,9 @@ class _MatiereCard extends StatelessWidget {
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
         onTap: () {
-          Navigator.pushNamed(
-            context,
+          context.push(
             AppRoutes.matiereDetail,
-            arguments: matiere,
+            extra: matiere,
           );
         },
         child: Padding(
@@ -446,10 +447,9 @@ class _MatiereCard extends StatelessWidget {
                     ),
                     color: const Color(0xFF1F3F6E),
                     onPressed: () async {
-                      final result = await Navigator.pushNamed(
-                        context,
+                      final result = await context.push(
                         AppRoutes.addEditMatiere,
-                        arguments: matiere,
+                        extra: matiere,
                       );
 
                       if (result == true && context.mounted) {
@@ -528,16 +528,47 @@ class _MatiereCard extends StatelessWidget {
                       return;
                     }
 
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text(
-                          'Suppression indisponible : le jeton JWT administrateur '
-                          'doit être fourni par le module d’authentification.',
+                    try {
+                      // Récupérer le jeton JWT de la session.
+                      final token = await TokenStorage().getAccessToken();
+
+                      if (token == null || token.trim().isEmpty) {
+                        throw Exception(
+                          'Session expirée ou absente. Connecte-toi à nouveau.',
+                        );
+                      }
+
+                      // Appeler le backend pour supprimer la matière.
+                      await MatiereRepository().deleteMatiere(
+                        matiere.id,
+                        token: token.trim(),
+                      );
+
+                      if (!context.mounted) return;
+
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Matière supprimée avec succès.'),
+                          backgroundColor: Colors.green,
+                          behavior: SnackBarBehavior.floating,
                         ),
-                        backgroundColor: Colors.orange,
-                        behavior: SnackBarBehavior.floating,
-                      ),
-                    );
+                      );
+
+                      // Actualiser la liste après confirmation du backend.
+                      onChanged();
+                    } catch (e) {
+                      if (!context.mounted) return;
+
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            e.toString().replaceFirst('Exception: ', ''),
+                          ),
+                          backgroundColor: Colors.red,
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    }
                   },
                 ),
                 ],

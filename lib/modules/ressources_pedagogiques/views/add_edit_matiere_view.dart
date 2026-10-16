@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../models/matiere.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../repositories/matiere_repository.dart';
+import '../../../../core/storage/token_storage.dart';
 
 class AddEditMatiereView extends StatefulWidget {
   final Matiere? matiere;
@@ -49,40 +51,85 @@ class _AddEditMatiereViewState extends State<AddEditMatiereView> {
   }
 
 
-Future<void> _submitForm() async {
-  if (!_formKey.currentState!.validate()) return;
+  Future<void> _submitForm() async {
+    if (!_formKey.currentState!.validate()) return;
 
-  setState(() {
-    _isSubmitting = true;
-  });
+    setState(() {
+      _isSubmitting = true;
+    });
 
-  try {
-    // Le JWT doit être fourni par le module d'authentification.
-    // Ne pas afficher un faux succès ni envoyer une requête
-    // protégée sans jeton valide.
-    throw Exception(
-      'Authentification en attente : le jeton JWT doit être fourni '
-      'par le module d’authentification.',
-    );
-  } catch (e) {
-    if (!mounted) return;
+    try {
+      // Récupération du jeton d'authentification.
+      final token = await TokenStorage().getAccessToken();
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          e.toString().replaceFirst('Exception: ', ''),
+      if (token == null || token.trim().isEmpty) {
+        throw Exception(
+          'Authentification requise. Connecte-toi avant de continuer.',
+        );
+      }
+
+      // Construction de la matière avec les valeurs du formulaire.
+      final matiere = Matiere(
+        id: widget.matiere?.id ?? '',
+        nom: _nomController.text.trim(),
+        code: _codeController.text.trim(),
+        description: _descriptionController.text.trim(),
+        createdAt: widget.matiere?.createdAt,
+        updatedAt: widget.matiere?.updatedAt,
+      );
+
+      final repository = MatiereRepository();
+
+      if (_isEditing) {
+        // Modification de la matière existante.
+        await repository.updateMatiere(
+          matiere,
+          token: token.trim(),
+        );
+      } else {
+        // Création d'une nouvelle matière.
+        await repository.createMatiere(
+          matiere,
+          token: token.trim(),
+        );
+      }
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            _isEditing
+                ? 'Matière modifiée avec succès.'
+                : 'Matière ajoutée avec succès.',
+          ),
+          backgroundColor: Colors.green,
+          behavior: SnackBarBehavior.floating,
         ),
-        backgroundColor: Colors.red,
-      ),
-    );
-  } finally {
-    if (mounted) {
-      setState(() {
-        _isSubmitting = false;
-      });
+      );
+
+      // Retourner true pour demander l'actualisation de la liste.
+      Navigator.of(context).pop(true);
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            e.toString().replaceFirst('Exception: ', ''),
+          ),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSubmitting = false;
+        });
+      }
     }
   }
-}
 
 
 

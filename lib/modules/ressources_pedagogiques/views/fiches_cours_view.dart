@@ -7,10 +7,11 @@ import 'fiche_detail_view.dart';
 import '../viewmodels/fiche_cours_viewmodel.dart';
 import '../models/matiere.dart';
 import '../repositories/matiere_repository.dart';
-
 import 'package:go_router/go_router.dart';
-
 import '../services/pdf_share_service.dart';
+import '../../../core/storage/token_storage.dart';
+import '../repositories/fiche_cours_repository.dart';
+
 
 class FicheItem {
   final String id;
@@ -57,6 +58,12 @@ class _FichesCoursViewState extends State<FichesCoursView> {
   String? _selectedMatiereId;
 
   final MatiereRepository _matiereRepository = MatiereRepository();
+
+  final FicheCoursRepository _ficheCoursRepository =
+      FicheCoursRepository();
+
+  final TokenStorage _tokenStorage = TokenStorage();
+
   List<Matiere> _matieres = [];
 
   late final FicheCoursViewModel _viewModel;
@@ -156,10 +163,23 @@ class _FichesCoursViewState extends State<FichesCoursView> {
   // ============================================================
 
   Future<void> _onAddFiche() async {
-    final result = await Navigator.pushNamed(context, AppRoutes.addFiche);
+    try {
+      final result = await context.push<bool>(
+        AppRoutes.addEditFiche,
+      );
 
-    if (result == true && mounted) {
-      setState(() {});
+      if (result == true && mounted) {
+        await _chargerFiches(page: _currentPage);
+      }
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Impossible d’ouvrir le formulaire : $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
@@ -1073,7 +1093,7 @@ class _FichesCoursViewState extends State<FichesCoursView> {
     );
 
     if (result == true && mounted) {
-      setState(() {});
+      await _chargerFiches(page: _currentPage);
     }
   }
 
@@ -1081,62 +1101,95 @@ class _FichesCoursViewState extends State<FichesCoursView> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          backgroundColor: isDark ? const Color(0xFF102542) : Colors.white,
-          title: Text(
-            'Supprimer la fiche ?',
-            style: TextStyle(
-              color: isDark ? Colors.white : Colors.black87,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          content: Text(
-            'Voulez-vous vraiment supprimer '
-            '« ${fiche.titre} » ?',
-            style: TextStyle(color: isDark ? Colors.white70 : Colors.black54),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(dialogContext, false);
-              },
-              child: Text(
-                'Annuler',
-                style: TextStyle(color: isDark ? Colors.white70 : primaryColor),
-              ),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pop(dialogContext, true);
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
-                foregroundColor: Colors.white,
-                elevation: 0,
-              ),
-              child: const Text('Supprimer'),
-            ),
-          ],
-        );
-      },
+    context: context,
+    builder: (dialogContext) {
+    return AlertDialog(
+    backgroundColor: isDark ? const Color(0xFF102542) : Colors.white,
+    title: Text(
+    'Supprimer la fiche ?',
+    style: TextStyle(
+    color: isDark ? Colors.white : Colors.black87,
+    fontWeight: FontWeight.bold,
+    ),
+    ),
+    content: Text(
+    'Voulez-vous vraiment supprimer « ${fiche.titre} » ?',
+    style: TextStyle(
+    color: isDark ? Colors.white70 : Colors.black54,
+    ),
+    ),
+    actions: [
+    TextButton(
+    onPressed: () => Navigator.pop(dialogContext, false),
+    child: Text(
+    'Annuler',
+    style: TextStyle(
+    color: isDark ? Colors.white70 : primaryColor,
+    ),
+    ),
+    ),
+    ElevatedButton(
+    onPressed: () => Navigator.pop(dialogContext, true),
+    style: ElevatedButton.styleFrom(
+    backgroundColor: Colors.red,
+    foregroundColor: Colors.white,
+    elevation: 0,
+    ),
+    child: const Text('Supprimer'),
+    ),
+    ],
+    );
+    },
     );
 
     if (confirmed != true || !mounted) return;
 
-    setState(() {
-      _fiches.removeWhere((item) => item.id == fiche.id);
-    });
+    try {
+    final token = await _tokenStorage.getAccessToken();
+
+    if (token == null || token.trim().isEmpty) {
+      throw Exception(
+        'Session expirée ou absente. Reconnecte-toi.',
+      );
+    }
+
+    await _ficheCoursRepository.deleteFicheCours(
+      fiche.id,
+      token: token,
+    );
+
+    if (!mounted) return;
+
+    // Retirer la fiche seulement après confirmation du serveur.
+    await _chargerFiches();
+
+    if (!mounted) return;
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Fiche supprimée avec succès'),
+        content: Text('Fiche supprimée avec succès.'),
         backgroundColor: Colors.green,
         behavior: SnackBarBehavior.floating,
       ),
     );
+
+    } catch (e) {
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'Échec de la suppression : '
+          '${e.toString().replaceFirst('Exception: ', '')}',
+        ),
+        backgroundColor: Colors.red,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+
+    }
   }
+
 
   void _onTelechargerFiche(FicheItem fiche) {
     Navigator.push(
