@@ -1,14 +1,19 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/routes/app_routes.dart';
+import '../models/sujet.dart';
+import '../viewmodels/sujet_viewmodel.dart';
 
 class SujetDetailView extends StatefulWidget {
-  final bool hasCorrige;
+final String id;
+final bool hasCorrige;
 
-  const SujetDetailView({
-    super.key,
-    this.hasCorrige = true,
-  });
+const SujetDetailView({
+super.key,
+required this.id,
+this.hasCorrige = false,
+});
+
 
   @override
   State<SujetDetailView> createState() => _SujetDetailViewState();
@@ -29,6 +34,15 @@ class _SujetDetailViewState extends State<SujetDetailView> {
 
   // Concours est le troisième onglet.
   int _currentIndex = 2;
+  final SujetViewModel _viewModel = SujetViewModel();
+
+  late Future<Sujet> _sujetFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _sujetFuture = _viewModel.loadSujetById(widget.id);
+  }
 
   // ============================================================
   // NAVIGATION PRINCIPALE
@@ -142,7 +156,53 @@ class _SujetDetailViewState extends State<SujetDetailView> {
       // ============================================================
 
       body: SafeArea(
-        child: SingleChildScrollView(
+  child: FutureBuilder<Sujet>(
+    future: _sujetFuture,
+    builder: (context, snapshot) {
+      if (snapshot.connectionState == ConnectionState.waiting) {
+        return const Center(
+          child: CircularProgressIndicator(
+            color: accentColor,
+          ),
+        );
+      }
+
+      if (snapshot.hasError || !snapshot.hasData) {
+        return Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.error_outline,
+                  size: 48,
+                  color: Colors.red,
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'Impossible de charger les détails du sujet.',
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 12),
+                ElevatedButton(
+                  onPressed: () {
+                    setState(() {
+                      _sujetFuture =
+                          _viewModel.loadSujetById(widget.id);
+                    });
+                  },
+                  child: const Text('Réessayer'),
+                ),
+              ],
+            ),
+          ),
+        );
+      }
+
+      final sujet = snapshot.data!;
+
+      return SingleChildScrollView(
           padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -155,7 +215,7 @@ class _SujetDetailViewState extends State<SujetDetailView> {
                 cardBgColor: cardBgColor,
                 isDark: isDark,
                 child: Text(
-                  'Mathématiques • MP • 4 h',
+                  '${sujet.matiereNom.isNotEmpty ? sujet.matiereNom : "Matière non renseignée"} • ${sujet.concours.isNotEmpty ? sujet.concours : "Concours non renseigné"}',
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.bold,
@@ -186,7 +246,7 @@ class _SujetDetailViewState extends State<SujetDetailView> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Mathématiques I • session 2025 • 12 pages',
+                      '${sujet.titre} • session ${sujet.anneeAcademique.isNotEmpty ? sujet.anneeAcademique : "non renseignée"}',
                       style: TextStyle(
                         fontSize: 12,
                         color: subTextColor,
@@ -237,7 +297,7 @@ class _SujetDetailViewState extends State<SujetDetailView> {
                                 ),
                               ),
                               Text(
-                                'mines_ponts_maths1_2025.pdf',
+                                sujet.fichier.split('/').last,
                                 style: TextStyle(
                                   fontSize: 11,
                                   color: subTextColor,
@@ -310,7 +370,7 @@ class _SujetDetailViewState extends State<SujetDetailView> {
               // 5. CORRIGÉ ASSOCIÉ
               // ======================================================
 
-              if (widget.hasCorrige) ...[
+              if (sujet.aCorrige) ...[
                 const SizedBox(height: 12),
 
                 _buildCardContainer(
@@ -393,7 +453,7 @@ class _SujetDetailViewState extends State<SujetDetailView> {
               // 6. ÉTAT SANS CORRIGÉ
               // ======================================================
 
-              if (!widget.hasCorrige) ...[
+              if (!sujet.aCorrige) ...[
                 const SizedBox(height: 12),
 
                 _buildCardContainer(
@@ -483,9 +543,14 @@ class _SujetDetailViewState extends State<SujetDetailView> {
 
               const SizedBox(height: 20),
             ],
-          ),
-        ),
-      ),
+                   ),
+        );
+    },
+  ),
+),
+
+// ============================================================
+// NAVIGATION BOTTOM
 
       // ============================================================
       // NAVIGATION BOTTOM

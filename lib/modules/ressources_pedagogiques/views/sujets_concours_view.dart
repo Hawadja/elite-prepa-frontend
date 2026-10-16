@@ -4,6 +4,7 @@ import '../../../core/routes/app_routes.dart';
 import '../../../core/theme/app_colors.dart';
 import 'telecharger_corrige_view.dart';
 import 'package:go_router/go_router.dart';
+import '../services/pdf_share_service.dart';
 
 class SujetConcoursItem {
   final String id;
@@ -204,12 +205,24 @@ class _SujetsConcoursViewState extends State<SujetsConcoursView> {
     );
   }
 
-  void _onPartagerSujet(SujetConcoursItem sujet) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Partager : ${sujet.titre}'),
-      ),
-    );
+  Future<void> _onPartagerSujet(SujetConcoursItem sujet) async {
+    try {
+      await PdfShareService.sharePdf(
+        id: sujet.id,
+        type: 'sujet',
+        titre: sujet.titre,
+        nomFichier: sujet.nomFichier,
+      );
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Impossible de partager le sujet : $e'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 
   // ============================================================

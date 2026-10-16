@@ -6,6 +6,7 @@ import '../../../core/routes/app_routes.dart';
 import '../viewmodels/sujet_viewmodel.dart';
 import 'telecharger_corrige_view.dart';
 import 'package:go_router/go_router.dart';
+import '../services/pdf_share_service.dart';
 
 class SujetGestionItem {
   final String id;
@@ -187,11 +188,19 @@ class _SujetsGestionViewState extends State<SujetsGestionView> {
   // AJOUTER
   // ============================================================
 
+ 
+
   Future<void> _onAddSujet() async {
-    final result = await Navigator.pushNamed(context, AppRoutes.addEditSujet);
+    final result = await context.push<bool>(AppRoutes.addEditSujet);
 
     if (result == true && mounted) {
-      setState(() {});
+      // Revenir à la première page pour afficher le sujet ajouté.
+      setState(() {
+        _currentPage = 1;
+      });
+
+      // Recharger les sujets depuis le backend.
+      await _chargerSujets();
     }
   }
 
@@ -224,12 +233,15 @@ class _SujetsGestionViewState extends State<SujetsGestionView> {
   // ============================================================
 
   void _onVoirSujet(SujetGestionItem sujet) {
-    Navigator.pushNamed(
-      context,
-      AppRoutes.sujetDetail,
-      arguments: {'hasCorrige': sujet.aCorrige},
+    context.push(
+    AppRoutes.sujetDetail,
+    extra: {
+    'id': sujet.id,
+    'hasCorrige': sujet.aCorrige,
+    },
     );
   }
+
 
   // ============================================================
   // TÉLÉCHARGER
@@ -257,13 +269,23 @@ class _SujetsGestionViewState extends State<SujetsGestionView> {
   // PARTAGER
   // ============================================================
 
-  void _onPartagerSujet(SujetGestionItem sujet) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Partage de : ${sujet.titre}'),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+  Future<void> _onPartagerSujet(SujetGestionItem sujet) async {
+    try {
+      await PdfShareService.sharePdf(
+        id: sujet.id,
+        type: 'sujet',
+        titre: sujet.titre,
+      );
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Impossible de partager le sujet : $e'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 
   // ============================================================

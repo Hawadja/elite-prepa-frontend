@@ -2,7 +2,10 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/routes/app_routes.dart';
-
+import '../models/sujet.dart';
+import '../repositories/sujet_repository.dart';
+import 'package:go_router/go_router.dart';
+import '../services/pdf_share_service.dart';
 // ============================================================
 // MODÈLE TEMPORAIRE — CORRIGÉ
 // À remplacer plus tard par le modèle provenant de l'API
@@ -61,6 +64,7 @@ class _CorrigesViewState extends State<CorrigesView> {
   int _currentIndex = 2;
   int _selectedChipIndex = 0;
   int _currentPage = 1;
+  static const int _pageSize = 5;
 
   final TextEditingController _searchController =
       TextEditingController();
@@ -73,49 +77,104 @@ class _CorrigesViewState extends State<CorrigesView> {
   ];
 
   // ============================================================
-  // DONNÉES TEMPORAIRES
-  // À remplacer plus tard par les données de l'API
+  // DONNÉES PROVENANT DU BACKEND
   // ============================================================
 
-  final List<CorrigeItem> _corriges = [
-    CorrigeItem(
-      id: '1',
-      titre: 'Corrigé 1 — Limites et continuité',
-      sousTitre: 'Corrigé du sujet sur les limites et la continuité',
-      matiere: 'Mathématiques',
-      concours: 'Concours',
-      annee: '2026',
-      nomFichier: 'corrige_limites_continuite_2026.pdf',
-    ),
-    CorrigeItem(
-      id: '2',
-      titre: 'Corrigé 2 — Cinématique',
-      sousTitre: 'Corrigé du sujet de cinématique',
-      matiere: 'Physique',
-      concours: 'Concours',
-      annee: '2026',
-      nomFichier: 'corrige_cinematique_2026.pdf',
-    ),
-    CorrigeItem(
-      id: '3',
-      titre: 'Corrigé 3 — Électromagnétisme',
-      sousTitre: 'Corrigé du sujet d’électromagnétisme',
-      matiere: 'Physique',
-      concours: 'Concours',
-      annee: '2026',
-      nomFichier: 'corrige_electromagnetisme_2026.pdf',
-    ),
-  ];
+  final SujetRepository _sujetRepository = SujetRepository();
+
+  List<CorrigeItem> _corriges = [];
+
+  bool _isLoading = true;
+  String? _errorMessage;
 
   // ============================================================
   // CYCLE DE VIE
   // ============================================================
 
   @override
+  void initState() {
+    super.initState();
+    _loadCorriges();
+  }
+
+  @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
   }
+
+  /// Charge les sujets depuis le backend et conserve
+  /// uniquement ceux qui possèdent un corrigé.
+  Future<void> _loadCorriges() async {
+    if (!mounted) return;
+
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final List<Sujet> sujets = [];
+
+      // Première page
+      final premierePage = await _sujetRepository.getSujetsPage(
+        page: 1,
+        limit: 100,
+      );
+
+      sujets.addAll(premierePage.items);
+
+      // Pages suivantes, si nécessaire
+      for (int page = 2; page <= premierePage.totalPages; page++) {
+        final resultat = await _sujetRepository.getSujetsPage(
+          page: page,
+          limit: 100,
+        );
+
+        sujets.addAll(resultat.items);
+      }
+
+      final corrigesRecuperes = sujets
+          .where((sujet) => sujet.aCorrige)
+          .map((sujet) {
+            final chemin = sujet.corrige!.trim();
+
+            // Récupère le nom du fichier depuis son chemin backend.
+            final nomFichier = chemin
+                .split(RegExp(r'[/\\]'))
+                .where((partie) => partie.isNotEmpty)
+                .last;
+
+            return CorrigeItem(
+              id: sujet.id,
+              titre: 'Corrigé — ${sujet.titre}',
+              sousTitre: sujet.description,
+              matiere: sujet.matiereNom.isNotEmpty
+                  ? sujet.matiereNom
+                  : 'Matière non renseignée',
+              concours: sujet.concours,
+              annee: sujet.anneeAcademique,
+              nomFichier: nomFichier,
+            );
+          })
+          .toList();
+
+      if (!mounted) return;
+
+      setState(() {
+        _corriges = corrigesRecuperes;
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        _errorMessage = e.toString();
+        _isLoading = false;
+      });
+    }
+  }
+ 
 
   // ============================================================
   // RECHERCHE / FILTRE
@@ -160,27 +219,47 @@ class _CorrigesViewState extends State<CorrigesView> {
     return result.toList();
   }
 
+  List<CorrigeItem> get _paginatedCorriges {
+    final corriges = _filteredCorriges;
+
+    if (corriges.isEmpty) {
+      return [];
+    }
+
+    final totalPages = (corriges.length / _pageSize).ceil();
+
+    // Évite de conserver une page qui n'existe plus
+    // après une recherche ou un changement de filtre.
+    final page = _currentPage.clamp(1, totalPages);
+
+    final startIndex = (page - 1) * _pageSize;
+    final endIndex = (startIndex + _pageSize).clamp(
+      0,
+      corriges.length,
+    );
+
+    return corriges.sublist(startIndex, endIndex);
+  }
+
   // ============================================================
   // VOIR
   // ============================================================
 
-void _onVoirCorrige(CorrigeItem corrige) {
-  Navigator.pushNamed(
-    context,
-    AppRoutes.corrigeDetail,
-    arguments: {
-      'id': corrige.id,
-      'titre': corrige.titre,
-      'sousTitre': corrige.sousTitre,
-      'matiere': corrige.matiere,
-      'concours': corrige.concours,
-      'annee': corrige.annee,
-      'nomFichier': corrige.nomFichier,
-      'type': 'corrige',
-    },
-  );
-}
-
+  void _onVoirCorrige(CorrigeItem corrige) {
+    context.push(
+      AppRoutes.corrigeDetail,
+      extra: {
+        'id': corrige.id,
+        'titre': corrige.titre,
+        'sousTitre': corrige.sousTitre,
+        'matiere': corrige.matiere,
+        'concours': corrige.concours,
+        'annee': corrige.annee,
+        'nomFichier': corrige.nomFichier,
+        'type': 'corrige',
+      },
+    );
+  }
 
 
   // ============================================================
@@ -188,41 +267,45 @@ void _onVoirCorrige(CorrigeItem corrige) {
   // ============================================================
 
 
-
-void _onTelechargerCorrige(CorrigeItem corrige) {
-  Navigator.pushNamed(
-    context,
-    AppRoutes.telechargerCorrige,
-    arguments: {
-      'id': corrige.id,
-      'titre': corrige.titre,
-      'sousTitre': corrige.sousTitre,
-      'matiere': corrige.matiere,
-      'concours': corrige.concours,
-      'annee': corrige.annee,
-      'nomFichier': corrige.nomFichier,
-      'type': 'corrige',
-    },
-  );
-}
-
-
-
+  void _onTelechargerCorrige(CorrigeItem corrige) {
+    context.push(
+      AppRoutes.telechargerCorrige,
+      extra: {
+        'id': corrige.id,
+        'titre': corrige.titre,
+        'sousTitre': corrige.sousTitre,
+        'matiere': corrige.matiere,
+        'concours': corrige.concours,
+        'annee': corrige.annee,
+        'nomFichier': corrige.nomFichier,
+        'type': 'corrige',
+      },
+    );
+  }
 
 
   // ============================================================
   // PARTAGER
   // ============================================================
 
-  void _onPartagerCorrige(CorrigeItem corrige) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Partage de : ${corrige.titre}',
+  Future<void> _onPartagerCorrige(CorrigeItem corrige) async {
+    try {
+      await PdfShareService.sharePdf(
+        id: corrige.id,
+        type: 'corrige',
+        titre: corrige.titre,
+        nomFichier: corrige.nomFichier,
+      );
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Impossible de partager le corrigé : $e'),
+          behavior: SnackBarBehavior.floating,
         ),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+      );
+    }
   }
 
   // ============================================================
@@ -230,145 +313,36 @@ void _onTelechargerCorrige(CorrigeItem corrige) {
   // ============================================================
 
 
-void _onModifierCorrige(CorrigeItem corrige) {
-  Navigator.pushNamed(
-    context,
-    AppRoutes.addEditCorrige,
-    arguments: {
-      'id': corrige.id,
-      'titre': corrige.titre,
-      'sousTitre': corrige.sousTitre,
-      'matiere': corrige.matiere,
-      'concours': corrige.concours,
-      'annee': corrige.annee,
-      'nomFichier': corrige.nomFichier,
-    },
-  ).then((result) {
-    if (result == true && mounted) {
-      setState(() {});
-    }
-  });
-}
-
 
 
   // ============================================================
   // SUPPRIMER
   // ============================================================
 
-  Future<void> _onSupprimerCorrige(
-    CorrigeItem corrige,
-  ) async {
-    final isDark =
-        Theme.of(context).brightness == Brightness.dark;
 
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          backgroundColor:
-              isDark ? darkCardColor : Colors.white,
-          title: Text(
-            'Supprimer le corrigé ?',
-            style: TextStyle(
-              color: isDark ? Colors.white : Colors.black87,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          content: Text(
-            'Voulez-vous vraiment supprimer '
-            '« ${corrige.titre} » ?',
-            style: TextStyle(
-              color: isDark ? Colors.white70 : Colors.black54,
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(dialogContext, false);
-              },
-              child: Text(
-                'Annuler',
-                style: TextStyle(
-                  color: isDark
-                      ? Colors.white70
-                      : primaryColor,
-                ),
-              ),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pop(dialogContext, true);
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: deleteRed,
-                foregroundColor: Colors.white,
-                elevation: 0,
-              ),
-              child: const Text('Supprimer'),
-            ),
-          ],
-        );
-      },
-    );
-
-    if (confirmed != true || !mounted) {
-      return;
-    }
-
-    setState(() {
-      _corriges.removeWhere(
-        (item) => item.id == corrige.id,
-      );
-    });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text(
-          'Corrigé supprimé avec succès',
-        ),
-        backgroundColor: Colors.green,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-  }
 
   // ============================================================
   // NAVIGATION
   // ============================================================
 
   void _onNavigationSelected(int index) {
-    if (index == _currentIndex) {
-      return;
-    }
+    if (index == _currentIndex) return;
 
     switch (index) {
       case 0:
-        Navigator.pushNamedAndRemoveUntil(
-          context,
-          AppRoutes.ressourcesDashboard,
-          (route) => false,
-        );
+        context.go(AppRoutes.ressourcesDashboard);
         break;
 
       case 1:
-        setState(() {
-          _currentIndex = index;
-        });
+        context.go(AppRoutes.fichesCours);
         break;
 
       case 2:
-        Navigator.pushNamedAndRemoveUntil(
-          context,
-          AppRoutes.sujetsConcours,
-          (route) => false,
-        );
+        context.go(AppRoutes.sujetsGestion);
         break;
 
       case 3:
-        setState(() {
-          _currentIndex = index;
-        });
+        context.push(AppRoutes.profil);
         break;
     }
   }
@@ -400,7 +374,7 @@ void _onModifierCorrige(CorrigeItem corrige) {
             ? const Color(0xFF0D1F38)
             : Colors.white;
 
-    final corriges = _filteredCorriges;
+    final corriges = _paginatedCorriges;
 
     return Scaffold(
       backgroundColor: backgroundColor,
@@ -453,11 +427,14 @@ void _onModifierCorrige(CorrigeItem corrige) {
               color: accentColor,
             ),
             tooltip: 'Ajouter un corrigé',
-              onPressed: () {
-                Navigator.pushNamed(
-                  context,
-                  AppRoutes.addEditCorrige,
+              onPressed: () async {
+                final resultat = await context.push<bool>(
+                  AppRoutes.addEditSujet,
                 );
+
+                if (resultat == true && mounted) {
+                  await _loadCorriges();
+                }
               },
           ),
           const SizedBox(width: 6),
@@ -702,12 +679,59 @@ void _onModifierCorrige(CorrigeItem corrige) {
               // LISTE
               // --------------------------------------------------
 
-              if (corriges.isEmpty)
+              if (_isLoading)
+                const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(32),
+                    child: CircularProgressIndicator(
+                      color: accentColor,
+                    ),
+                  ),
+                )
+              else if (_errorMessage != null)
+                Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      children: [
+                        const Icon(
+                          Icons.cloud_off_outlined,
+                          size: 42,
+                          color: Colors.redAccent,
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          'Impossible de charger les corrigés.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: textColor,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          _errorMessage!,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: secondaryTextColor,
+                            fontSize: 12,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        ElevatedButton.icon(
+                          onPressed: _loadCorriges,
+                          icon: const Icon(Icons.refresh),
+                          label: const Text('Réessayer'),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              else if (corriges.isEmpty)
                 _buildEmptyState(
                   isDark: isDark,
                   textColor: textColor,
-                  secondaryTextColor:
-                      secondaryTextColor,
+                  secondaryTextColor: secondaryTextColor,
                 )
               else
                 ...corriges.map(
@@ -875,8 +899,7 @@ void _onModifierCorrige(CorrigeItem corrige) {
                 tooltip: 'Actions',
                 icon: Icon(
                   Icons.more_vert,
-                  color:
-                      secondaryTextColor,
+                  color: secondaryTextColor,
                 ),
                 onSelected: (value) {
                   switch (value) {
@@ -885,27 +908,11 @@ void _onModifierCorrige(CorrigeItem corrige) {
                       break;
 
                     case 'telecharger':
-                      _onTelechargerCorrige(
-                        corrige,
-                      );
+                      _onTelechargerCorrige(corrige);
                       break;
 
                     case 'partager':
-                      _onPartagerCorrige(
-                        corrige,
-                      );
-                      break;
-
-                    case 'modifier':
-                      _onModifierCorrige(
-                        corrige,
-                      );
-                      break;
-
-                    case 'supprimer':
-                      _onSupprimerCorrige(
-                        corrige,
-                      );
+                      _onPartagerCorrige(corrige);
                       break;
                   }
                 },
@@ -953,42 +960,11 @@ void _onModifierCorrige(CorrigeItem corrige) {
                         ],
                       ),
                     ),
-                    PopupMenuItem<String>(
-                      value: 'modifier',
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.edit_outlined,
-                            size: 19,
-                            color: Colors.black,
-                          ),
-                          SizedBox(width: 10),
-                          Text('Modifier'),
-                        ],
-                      ),
-                    ),
-                    PopupMenuItem<String>(
-                      value: 'supprimer',
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.delete_outline,
-                            size: 19,
-                            color: deleteRed,
-                          ),
-                          SizedBox(width: 10),
-                          Text(
-                            'Supprimer',
-                            style: TextStyle(
-                              color: deleteRed,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
                   ];
                 },
               ),
+
+
             ],
           ),
 
@@ -1210,63 +1186,67 @@ void _onModifierCorrige(CorrigeItem corrige) {
     required bool isDark,
     required Color secondaryTextColor,
   }) {
-    return Row(
-      mainAxisAlignment:
-          MainAxisAlignment.spaceBetween,
+    final totalCorriges = _filteredCorriges.length;
+
+    if (totalCorriges == 0) {
+      return const SizedBox.shrink();
+    }
+
+    final totalPages = (totalCorriges / _pageSize).ceil();
+    final page = _currentPage.clamp(1, totalPages).toInt();
+
+    final debut = (page - 1) * _pageSize + 1;
+    final fin = (page * _pageSize).clamp(0, totalCorriges).toInt();
+
+    return Wrap(
+      alignment: WrapAlignment.spaceBetween,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      spacing: 12,
+      runSpacing: 8,
       children: [
         Text(
-          '1–${_filteredCorriges.length} sur '
-          '${_filteredCorriges.length} corrigé'
-          '${_filteredCorriges.length > 1 ? 's' : ''}',
+          '$debut–$fin sur $totalCorriges corrigé'
+          '${totalCorriges > 1 ? 's' : ''}',
           style: TextStyle(
             fontSize: 12,
-            fontWeight:
-                FontWeight.w500,
-            color:
-                secondaryTextColor,
+            fontWeight: FontWeight.w500,
+            color: secondaryTextColor,
           ),
         ),
         Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
             _buildPageButton(
               icon: Icons.chevron_left,
-              onTap: _currentPage > 1
+              onTap: page > 1
                   ? () {
                       setState(() {
-                        _currentPage--;
+                        _currentPage = page - 1;
                       });
                     }
                   : null,
               isDark: isDark,
             ),
             const SizedBox(width: 4),
-            _buildPageNumberButton(
-              pageNumber: 1,
-              isSelected:
-                  _currentPage == 1,
-              isDark: isDark,
-            ),
-            const SizedBox(width: 4),
-            _buildPageNumberButton(
-              pageNumber: 2,
-              isSelected:
-                  _currentPage == 2,
-              isDark: isDark,
-            ),
-            const SizedBox(width: 4),
-            _buildPageNumberButton(
-              pageNumber: 3,
-              isSelected:
-                  _currentPage == 3,
-              isDark: isDark,
-            ),
+            ...List.generate(totalPages, (index) {
+              final pageNumber = index + 1;
+
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 2),
+                child: _buildPageNumberButton(
+                  pageNumber: pageNumber,
+                  isSelected: page == pageNumber,
+                  isDark: isDark,
+                ),
+              );
+            }),
             const SizedBox(width: 4),
             _buildPageButton(
               icon: Icons.chevron_right,
-              onTap: _currentPage < 3
+              onTap: page < totalPages
                   ? () {
                       setState(() {
-                        _currentPage++;
+                        _currentPage = page + 1;
                       });
                     }
                   : null,

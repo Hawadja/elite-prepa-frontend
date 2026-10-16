@@ -27,6 +27,7 @@ import '../../modules/ressources_pedagogiques/views/fiche_detail_view.dart';
 import '../../modules/ressources_pedagogiques/views/sujets_concours_view.dart';
 import '../../modules/ressources_pedagogiques/views/sujets_gestion_view.dart';
 import '../../modules/ressources_pedagogiques/views/sujet_detail_view.dart';
+import '../../modules/ressources_pedagogiques/views/add_edit_sujet_view.dart';
 
 import '../../modules/ressources_pedagogiques/views/corriges_view.dart';
 import '../../modules/ressources_pedagogiques/views/corrige_detail_view.dart';
@@ -224,6 +225,10 @@ class AppRouter {
       // ============================================================
       // SUJETS DE CONCOURS
       // ============================================================
+      GoRoute(
+        path: AppRoutes.addEditSujet,
+        builder: (context, state) => const AddEditSujetView(),
+      ),
 
       GoRoute(
         path: AppRoutes.sujetsConcours,
@@ -236,14 +241,25 @@ class AppRouter {
       GoRoute(
         path: AppRoutes.sujetDetail,
         builder: (context, state) {
-          final extra = state.extra;
-          final hasCorrige = extra is Map<String, dynamic>
-              ? extra['hasCorrige'] as bool? ?? true
-              : true;
+        final extra = state.extra;
 
-          return SujetDetailView(hasCorrige: hasCorrige);
+
+        final arguments = extra is Map<String, dynamic>
+            ? extra
+            : <String, dynamic>{};
+
+        final id = arguments['id']?.toString() ?? '';
+        final hasCorrige = arguments['hasCorrige'] as bool? ?? false;
+
+        return SujetDetailView(
+          id: id,
+          hasCorrige: hasCorrige,
+        );
+
+
         },
       ),
+
 
       // ============================================================
       // CORRIGES

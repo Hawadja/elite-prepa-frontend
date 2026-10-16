@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:open_filex/open_filex.dart';
 import 'package:path_provider/path_provider.dart';
+import '../../../core/storage/token_storage.dart';
 
 class TelechargerCorrigeView extends StatefulWidget {
   final String? id;
@@ -37,7 +38,7 @@ class TelechargerCorrigeView extends StatefulWidget {
 }
 
 class _TelechargerCorrigeViewState extends State<TelechargerCorrigeView> {
-  static const String _baseUrl = 'http://10.2.7.93:3000';
+  static const String _baseUrl = 'http://192.168.137.1:3000';
   static const Color _primaryColor = Color(0xFF1F3F6E);
   static const Color _accentColor = Color(0xFFF0A500);
 
@@ -110,7 +111,7 @@ class _TelechargerCorrigeViewState extends State<TelechargerCorrigeView> {
     if (_isDownloading) return;
 
     final id = widget.id?.trim() ?? '';
-    final token = widget.token?.trim() ?? '';
+    final token = await _getAccessToken() ?? '';
 
     if (id.isEmpty) {
       _showError('Identifiant du document manquant.');
@@ -612,5 +613,14 @@ class _TelechargerCorrigeViewState extends State<TelechargerCorrigeView> {
         ),
       ],
     );
+  }
+  Future<String?> _getAccessToken() async {
+    final tokenFromArguments = widget.token?.trim();
+
+    if (tokenFromArguments != null && tokenFromArguments.isNotEmpty) {
+      return tokenFromArguments;
+    }
+
+    return TokenStorage().getAccessToken();
   }
 }

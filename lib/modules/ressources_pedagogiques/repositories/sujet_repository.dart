@@ -4,6 +4,10 @@ import 'package:http/http.dart' as http;
 
 import '../models/sujet.dart';
 
+import 'package:file_picker/file_picker.dart';
+
+import '../../../core/storage/token_storage.dart';
+
 /// RÃƒÂ©sultat paginÃƒÂ© retournÃƒÂ© par l'API des sujets.
 class SujetsPage {
   final List<Sujet> items;
@@ -53,6 +57,221 @@ class SujetsPage {
 
 class SujetRepository {
   static const String baseUrl = 'http://192.168.137.1:3000';
+
+  final TokenStorage _tokenStorage = TokenStorage();
+
+  /// Récupère un jeton valide pour les requêtes protégées.
+  Future<String> _getToken() async {
+    final token = await _tokenStorage.getAccessToken();
+
+    if (token == null || token.trim().isEmpty) {
+      throw Exception(
+        'Authentification requise. Connecte-toi avant de continuer.',
+      );
+    }
+
+    return token.trim();
+  }
+
+  /// Ajoute un sujet et ses fichiers PDF.
+  Future<void> createSujet({
+    required String titre,
+    required String description,
+    required String matiereId,
+    required String concours,
+    required String anneeAcademique,
+    required PlatformFile fichier,
+    PlatformFile? corrige,
+  }) async {
+    final token = await _getToken();
+
+    final uri = Uri.parse('$baseUrl/api/sujets');
+
+    final request = http.MultipartRequest('POST', uri);
+
+    request.headers['Accept'] = 'application/json';
+    request.headers['Authorization'] = 'Bearer $token';
+
+    request.fields.addAll({
+      'titre': titre.trim(),
+      'description': description.trim(),
+      'matiere': matiereId,
+      'concours': concours.trim(),
+      'anneeAcademique': anneeAcademique.trim(),
+    });
+
+    request.files.add(
+      await _platformFileToMultipart(
+        fichier,
+        'fichier',
+      ),
+    );
+
+    if (corrige != null) {
+      request.files.add(
+        await _platformFileToMultipart(
+          corrige,
+          'corrige',
+        ),
+      );
+    }
+
+    final streamedResponse = await request.send().timeout(
+      const Duration(seconds: 30),
+    );
+
+    final response = await http.Response.fromStream(streamedResponse);
+
+    _checkResponse(response);
+  }
+
+  /// Convertit un fichier sélectionné en pièce jointe HTTP.
+  Future<http.MultipartFile> _platformFileToMultipart(
+    PlatformFile file,
+    String fieldName,
+  ) async {
+    final extension = file.extension?.toLowerCase();
+
+    if (extension != 'pdf') {
+      throw Exception(
+        'Le fichier "${file.name}" doit être au format PDF.',
+      );
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      throw Exception(
+        'Le fichier "${file.name}" dépasse la limite de 10 Mo.',
+      );
+    }
+
+    if (file.path != null && file.path!.isNotEmpty) {
+      return http.MultipartFile.fromPath(
+        fieldName,
+        file.path!,
+        filename: file.name,
+      );
+    }
+
+    if (file.bytes != null) {
+      return http.MultipartFile.fromBytes(
+        fieldName,
+        file.bytes!,
+        filename: file.name,
+      );
+    }
+
+    throw Exception(
+      'Impossible de lire le fichier "${file.name}".',
+    );
+  }
+
+  /// Modifie les informations textuelles d'un sujet existant.
+  ///
+  /// Le backend ne permet pas encore de remplacer les PDF.
+  Future<void> updateSujet({
+    required String id,
+    required String titre,
+    required String description,
+    required String matiereId,
+    required String concours,
+    required String anneeAcademique,
+  }) async {
+    if (id.trim().isEmpty) {
+      throw ArgumentError(
+        'Identifiant du sujet manquant.',
+      );
+    }
+
+    final token = await _getToken();
+
+    final uri = Uri.parse(
+      '$baseUrl/api/sujets/${Uri.encodeComponent(id)}',
+    );
+
+    final response = await http
+        .put(
+          uri,
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $token',
+          },
+          body: jsonEncode({
+            'titre': titre.trim(),
+            'description': description.trim(),
+            'matiere': matiereId,
+            'concours': concours.trim(),
+            'anneeAcademique': anneeAcademique.trim(),
+          }),
+        )
+        .timeout(const Duration(seconds: 15));
+
+    _checkResponse(response);
+  }
+
+  /// Supprime un sujet sur le backend.
+  Future<void> deleteSujet(String id) async {
+    if (id.trim().isEmpty) {
+      throw ArgumentError(
+        'Identifiant du sujet manquant.',
+      );
+    }
+
+    final token = await _getToken();
+
+    final uri = Uri.parse(
+      '$baseUrl/api/sujets/${Uri.encodeComponent(id)}',
+    );
+
+    final response = await http
+        .delete(
+          uri,
+          headers: {
+            'Accept': 'application/json',
+            'Authorization': 'Bearer $token',
+          },
+        )
+        .timeout(const Duration(seconds: 15));
+
+    _checkResponse(response);
+  }
+
+  /// Vérifie les réponses du backend.
+  void _checkResponse(http.Response response) {
+    if (response.statusCode >= 200 &&
+        response.statusCode < 300) {
+      return;
+    }
+
+    String message = 'Erreur du serveur : HTTP ${response.statusCode}';
+
+    try {
+      final dynamic decoded = jsonDecode(response.body);
+
+      if (decoded is Map<String, dynamic>) {
+        final dynamic serverMessage =
+            decoded['message'] ?? decoded['error'];
+
+        if (serverMessage != null) {
+          message = serverMessage is List
+              ? serverMessage.join('\n')
+              : serverMessage.toString();
+        }
+      }
+    } catch (_) {
+      // La réponse n'est pas nécessairement au format JSON.
+    }
+
+    if (response.statusCode == 401) {
+      message = 'Session expirée ou utilisateur non authentifié.';
+    } else if (response.statusCode == 403) {
+      message = 'Accès refusé : un compte administrateur est requis.';
+    } else if (response.statusCode == 413) {
+      message = 'Le fichier envoyé est trop volumineux.';
+    }
+
+    throw Exception(message);
+  }
 
   /// Charge une page de sujets depuis le backend.
   Future<SujetsPage> getSujetsPage({

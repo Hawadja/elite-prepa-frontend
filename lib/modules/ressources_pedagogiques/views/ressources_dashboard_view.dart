@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-
 import '../../../core/routes/app_routes.dart';
+import '../repositories/matiere_repository.dart';
+import '../repositories/fiche_cours_repository.dart';
+import '../repositories/sujet_repository.dart';
 
 class RessourcesDashboardView extends StatefulWidget {
   const RessourcesDashboardView({super.key});
@@ -18,6 +20,71 @@ class RessourcesDashboardView extends StatefulWidget {
 class _RessourcesDashboardViewState
     extends State<RessourcesDashboardView> {
   int _currentIndex = 0;
+
+  final MatiereRepository _matiereRepository = MatiereRepository();
+  final FicheCoursRepository _ficheCoursRepository =
+      FicheCoursRepository();
+  final SujetRepository _sujetRepository = SujetRepository();
+
+  int? _nombreMatieres;
+  int? _nombreFichesCours;
+  int? _nombreSujets;
+  int? _nombreCorriges;
+
+  @override
+  void initState() {
+    super.initState();
+    _chargerStatistiques();
+  }
+
+  Future<void> _chargerStatistiques() async {
+    try {
+      // 1. Récupérer les matières
+      final matieres = await _matiereRepository.getMatieres();
+
+      // 2. Récupérer les fiches de cours
+      final fichesCours =
+          await _ficheCoursRepository.getFichesCours();
+
+      // 3. Récupérer les sujets et leurs corrigés
+      final premierePage = await _sujetRepository.getSujetsPage(
+        page: 1,
+        limit: 100,
+      );
+
+      int nombreSujets = premierePage.total;
+
+      int nombreCorriges = premierePage.items
+          .where((sujet) => sujet.aCorrige)
+          .length;
+
+      // Parcourir les autres pages pour compter tous les corrigés.
+      for (int page = 2; page <= premierePage.totalPages; page++) {
+        final resultat = await _sujetRepository.getSujetsPage(
+          page: page,
+          limit: 100,
+        );
+
+        nombreCorriges += resultat.items
+            .where((sujet) => sujet.aCorrige)
+            .length;
+      }
+
+      if (!mounted) return;
+
+      setState(() {
+        _nombreMatieres = matieres.length;
+        _nombreFichesCours = fichesCours.length;
+        _nombreSujets = nombreSujets;
+        _nombreCorriges = nombreCorriges;
+      });
+    } catch (e, stackTrace) {
+      debugPrint(
+        'Erreur lors du chargement des statistiques : $e',
+      );
+      debugPrintStack(stackTrace: stackTrace);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -127,7 +194,7 @@ appBar: AppBar(
                 children: [
                   _StatCard(
                     title: 'Matières',
-                    value: '8',
+                    value: _nombreMatieres?.toString() ?? '...',
                     icon: Icons.menu_book_outlined,
                     onTap: () {
                       context.push(AppRoutes.matieres);
@@ -136,7 +203,7 @@ appBar: AppBar(
 
                   _StatCard(
                     title: 'Fiches de cours',
-                    value: '42',
+                    value: _nombreFichesCours?.toString() ?? '...',
                     icon: Icons.description_outlined,
                     onTap: () {
                       context.push(AppRoutes.fichesCours);
@@ -145,7 +212,7 @@ appBar: AppBar(
 
                   _StatCard(
                     title: 'Sujets',
-                    value: '27',
+                    value: _nombreSujets?.toString() ?? '...',
                     icon: Icons.assignment_outlined,
                     onTap: () {
                       context.push(AppRoutes.sujetsGestion);
@@ -154,7 +221,7 @@ appBar: AppBar(
 
                   _StatCard(
                     title: 'Corrigés disponibles',
-                    value: '19',
+                    value: _nombreCorriges?.toString() ?? '...',
                     icon: Icons.check_circle_outline,
                     iconColor: Color(0xFFF0A500),
                     onTap: () {
