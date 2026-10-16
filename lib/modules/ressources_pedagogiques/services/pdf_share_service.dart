@@ -1,6 +1,5 @@
-﻿import 'dart:io';
+import 'dart:io';
 
-import 'package:cross_file/cross_file.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
@@ -51,13 +50,15 @@ class PdfShareService {
         throw ArgumentError('Type de document non pris en charge : $type');
     }
 
-    final response = await http.get(
-      Uri.parse('$_baseUrl$endpoint'),
-      headers: {
-        'Accept': 'application/pdf',
-        'Authorization': 'Bearer $token',
-      },
-    ).timeout(const Duration(seconds: 60));
+    final response = await http
+        .get(
+          Uri.parse('$_baseUrl$endpoint'),
+          headers: {
+            'Accept': 'application/pdf',
+            'Authorization': 'Bearer $token',
+          },
+        )
+        .timeout(const Duration(seconds: 60));
 
     if (response.statusCode == 401) {
       throw Exception('Session expirée. Reconnecte-toi.');
@@ -86,9 +87,7 @@ class PdfShareService {
 
     var fileName = (nomFichier ?? '').trim();
 
-    if (fileName.isEmpty) {
-      fileName = '${type}_${documentId}.pdf';
-    }
+    if (fileName.isEmpty) fileName = '${type}_$documentId.pdf';
 
     fileName = fileName.split(RegExp(r'[/\\]')).last;
 
@@ -96,14 +95,9 @@ class PdfShareService {
       fileName = '$fileName.pdf';
     }
 
-    fileName = fileName.replaceAll(
-      RegExp(r'[<>:"|?*\x00-\x1F]'),
-      '_',
-    );
+    fileName = fileName.replaceAll(RegExp(r'[<>:"|?*\x00-\x1F]'), '_');
 
-    final file = File(
-      '${directory.path}${Platform.pathSeparator}$fileName',
-    );
+    final file = File('${directory.path}${Platform.pathSeparator}$fileName');
 
     await file.writeAsBytes(response.bodyBytes, flush: true);
 
