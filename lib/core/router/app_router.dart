@@ -196,6 +196,7 @@ class AppRouter {
               id: extra['id']?.toString(),
               titre: extra['titre']?.toString(),
               matiere: extra['matiere']?.toString(),
+              matiereId: extra['matiereId']?.toString(),
               description: extra['description']?.toString(),
               nomFichier: extra['nomFichier']?.toString(),
             );
@@ -467,4 +468,8 @@ class HomeScreen extends StatelessWidget {
     );
   }
 }
+
+
+
+
 

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 
 import '../../../core/storage/token_storage.dart';
 import '../repositories/fiche_cours_repository.dart';
@@ -11,6 +11,7 @@ class AddEditFicheView extends StatefulWidget {
   final String? id;
   final String? titre;
   final String? matiere;
+  final String? matiereId;
   final String? description;
   final String? nomFichier;
 
@@ -19,6 +20,7 @@ class AddEditFicheView extends StatefulWidget {
     this.id,
     this.titre,
     this.matiere,
+    this.matiereId,
     this.description,
     this.nomFichier,
   });
@@ -107,7 +109,7 @@ class _AddEditFicheViewState extends State<AddEditFicheView> {
 
       setState(() {
         _chargementMatieres = false;
-        _erreurMatieres = 'Impossible de charger les matières.';
+        _erreurMatieres = 'Impossible de charger les matieres.';
       });
     }
   }
@@ -127,7 +129,7 @@ class _AddEditFicheViewState extends State<AddEditFicheView> {
     if (file is! PlatformFile) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Impossible de récupérer le fichier PDF.'),
+          content: Text('Impossible de recuperer le fichier PDF.'),
           backgroundColor: Colors.red,
         ),
       );
@@ -156,7 +158,7 @@ class _AddEditFicheViewState extends State<AddEditFicheView> {
         _matiereSelectionnee!.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Veuillez sélectionner une matière.'),
+          content: Text('Veuillez selectionner une matiere.'),
           backgroundColor: Colors.red,
         ),
       );
@@ -166,7 +168,7 @@ class _AddEditFicheViewState extends State<AddEditFicheView> {
     if (!widget.isEditMode && _selectedFile == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Veuillez sélectionner le PDF de la fiche.'),
+          content: Text('Veuillez selectionner le PDF de la fiche.'),
           backgroundColor: Colors.red,
         ),
       );
@@ -179,7 +181,7 @@ class _AddEditFicheViewState extends State<AddEditFicheView> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
-            'Veuillez renseigner le concours et l’année académique.',
+            'Veuillez renseigner le concours et l annee academique.',
           ),
           backgroundColor: Colors.red,
         ),
@@ -196,7 +198,7 @@ class _AddEditFicheViewState extends State<AddEditFicheView> {
 
       if (token == null || token.trim().isEmpty) {
         throw Exception(
-          'Session expirée ou absente. Reconnecte-toi.',
+          'Session expire ou absente. Reconnecte-toi.',
         );
       }
 
@@ -225,8 +227,8 @@ class _AddEditFicheViewState extends State<AddEditFicheView> {
         SnackBar(
           content: Text(
             widget.isEditMode
-                ? 'Fiche de cours modifiée avec succès.'
-                : 'Fiche de cours ajoutée avec succès.',
+                ? 'Fiche de cours modifier avec succes.'
+                : 'Fiche de cours ajouter avec succes.',
           ),
           backgroundColor: Colors.green,
           behavior: SnackBarBehavior.floating,
@@ -336,7 +338,7 @@ class _AddEditFicheViewState extends State<AddEditFicheView> {
               ),
             ),
             const Text(
-              'Ressources · Elite-Prepa',
+              'Ressources Â· Elite-Prepa',
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.normal,
@@ -385,7 +387,7 @@ class _AddEditFicheViewState extends State<AddEditFicheView> {
                 _buildFormField(
                   label: 'Titre',
                   hintText:
-                      'Ex. Limites et continuité',
+                      'Ex. Limites et continuite',
                   controller: _titreController,
                   cardColor: cardColor,
                   textColor: textColor,
@@ -402,7 +404,7 @@ class _AddEditFicheViewState extends State<AddEditFicheView> {
                 const SizedBox(height: 12),
 
                 Text(
-                  'Matière *',
+                  'Matiere *',
                   style: TextStyle(
                     color: textColor,
                     fontSize: 14,
@@ -437,13 +439,13 @@ class _AddEditFicheViewState extends State<AddEditFicheView> {
                             _chargerMatieres();
                           },
                           icon: const Icon(Icons.refresh),
-                          label: const Text('Réessayer'),
+                          label: const Text('Ressayer'),
                         ),
                       ],
                     )
                   else if (_matieres.isEmpty)
                     const Text(
-                      'Aucune matière disponible.',
+                      'Aucune matiere disponible.',
                       style: TextStyle(color: Colors.orange),
                     )
                   else
@@ -451,7 +453,7 @@ class _AddEditFicheViewState extends State<AddEditFicheView> {
                       initialValue: _matiereSelectionnee,
                       isExpanded: true,
                       decoration: InputDecoration(
-                        hintText: 'Sélectionner une matière',
+                        hintText: 'Selectionner une matiere',
                         prefixIcon: const Icon(Icons.school_outlined),
                         filled: true,
                         fillColor: cardColor,
@@ -472,7 +474,7 @@ class _AddEditFicheViewState extends State<AddEditFicheView> {
                       },
                       validator: (value) {
                         if (value == null || value.isEmpty) {
-                          return 'Veuillez sélectionner une matière.';
+                          return 'Veuillez selectionner une matiere.';
                         }
 
                         return null;
@@ -485,7 +487,7 @@ class _AddEditFicheViewState extends State<AddEditFicheView> {
                 _buildFormField(
                   label: 'Description',
                   hintText:
-                      'Objectifs, notions clés et prérequis...',
+                      'Objectifs, notions cle et prerequis...',
                   controller:
                       _descriptionController,
                   cardColor: cardColor,
@@ -512,14 +514,14 @@ class _AddEditFicheViewState extends State<AddEditFicheView> {
             const SizedBox(height: 12),
 
             _buildFormField(
-              label: 'Année académique',
+              label: 'Annee academique',
               hintText: 'Ex. : 2025-2026',
               controller: _anneeController,
               cardColor: cardColor,
               textColor: textColor,
               validator: (value) {
                 if (value == null || value.trim().isEmpty) {
-                  return 'Veuillez renseigner l’année académique.';
+                  return 'Veuillez renseigner l annee academique.';
                 }
                 return null;
               },
@@ -589,7 +591,7 @@ class _AddEditFicheViewState extends State<AddEditFicheView> {
 
                 Center(
                   child: Text(
-                    'Format accepté : PDF · 20 Mo maximum',
+                    'Format accepte : PDF Â· 20 Mo maximum',
                     style: TextStyle(
                       fontSize: 11,
                       color: secondaryTextColor,
@@ -621,7 +623,7 @@ class _AddEditFicheViewState extends State<AddEditFicheView> {
           NavigationDestination(
             icon: Icon(Icons.menu_book_outlined),
             selectedIcon: Icon(Icons.menu_book),
-            label: 'Révisions',
+            label: 'Revisions',
           ),
           NavigationDestination(
             icon: Icon(Icons.school_outlined),
@@ -755,7 +757,7 @@ class _AddEditFicheViewState extends State<AddEditFicheView> {
               children: [
                 Text(
                   hasFile
-                      ? 'Fichier sélectionné'
+                      ? 'Fichier selectionne'
                       : 'Ajouter le fichier PDF',
                   style: TextStyle(
                     fontSize: 13,
@@ -769,7 +771,7 @@ class _AddEditFicheViewState extends State<AddEditFicheView> {
                 Text(
                   hasFile
                       ? _selectedFileName!
-                      : 'Appuyez pour sélectionner un PDF',
+                      : 'Appuyez pour selectionner un PDF',
                   maxLines: 2,
                   overflow:
                       TextOverflow.ellipsis,
@@ -814,7 +816,7 @@ class _AddEditFicheViewState extends State<AddEditFicheView> {
           else
             IconButton(
               onPressed: _pickPDFFile,
-              tooltip: 'Sélectionner un PDF',
+              tooltip: 'Selectionner un PDF',
               icon: Icon(
                 Icons.chevron_right,
                 color: secondaryTextColor,

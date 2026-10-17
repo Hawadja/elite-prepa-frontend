@@ -8,6 +8,8 @@ import '../repositories/sujet_repository.dart';
 import 'telecharger_corrige_view.dart';
 import 'package:go_router/go_router.dart';
 import '../services/pdf_share_service.dart';
+import '../repositories/matiere_repository.dart';
+import '../models/matiere.dart';
 
 class SujetGestionItem {
   final String id;
@@ -58,13 +60,29 @@ class _SujetsGestionViewState extends State<SujetsGestionView> {
   // ============================================================
 
   int _currentIndex = 2;
-  int _selectedChipIndex = 0;
   int _currentPage = 1;
 
   final TextEditingController _searchController = TextEditingController();
   Timer? _searchDebounce;
 
-  final List<String> _filters = ['Tous', 'Maths', 'Physique', '2026'];
+  final MatiereRepository _matiereRepository = MatiereRepository();
+
+  List<Matiere> _matieresDisponibles = [];
+  List<String> _anneesDisponibles = [];
+  List<String> _concoursDisponibles = [];
+
+  String? _matiereSelectionnee;
+  String? _anneeSelectionnee;
+  String? _concoursSelectionne;
+  int get _nombreFiltresActifs {
+  int nombre = 0;
+
+  if (_matiereSelectionnee != null) nombre++;
+  if (_anneeSelectionnee != null) nombre++;
+  if (_concoursSelectionne != null) nombre++;
+
+  return nombre;
+}
 
   // ============================================================
   // DONNÃ‰ES DU BACKEND
@@ -90,6 +108,7 @@ class _SujetsGestionViewState extends State<SujetsGestionView> {
   @override
   void initState() {
     super.initState();
+    _chargerFiltresDynamiques();
     _chargerSujets();
   }
 
@@ -104,6 +123,77 @@ class _SujetsGestionViewState extends State<SujetsGestionView> {
   // CHARGEMENT DES SUJETS DEPUIS LE BACKEND
   // ============================================================
 
+  Future<void> _chargerFiltresDynamiques() async {
+    try {
+      // Charger les matières depuis le backend.
+      final matieres = await _matiereRepository.getMatieres();
+
+      // Récupérer toutes les pages de sujets pour construire
+      // les listes complètes des années et des concours.
+      final Set<String> annees = {};
+      final Set<String> concours = {};
+
+      final premierePage = await _sujetViewModel.loadSujets(
+        page: 1,
+        limit: 100,
+      );
+
+      for (final sujet in premierePage.items) {
+        final annee = sujet.anneeAcademique.trim();
+        final nomConcours = sujet.concours.trim();
+
+        if (annee.isNotEmpty) {
+          annees.add(annee);
+        }
+
+        if (nomConcours.isNotEmpty) {
+          concours.add(nomConcours);
+        }
+      }
+
+      for (int page = 2; page <= premierePage.totalPages; page++) {
+        final resultat = await _sujetViewModel.loadSujets(
+          page: page,
+          limit: 100,
+        );
+
+        for (final sujet in resultat.items) {
+          final annee = sujet.anneeAcademique.trim();
+          final nomConcours = sujet.concours.trim();
+
+          if (annee.isNotEmpty) {
+            annees.add(annee);
+          }
+
+          if (nomConcours.isNotEmpty) {
+            concours.add(nomConcours);
+          }
+        }
+      }
+
+      if (!mounted) return;
+
+      setState(() {
+        _matieresDisponibles = matieres
+            .where((matiere) => matiere.id.isNotEmpty && matiere.nom.isNotEmpty)
+            .toList()
+          ..sort(
+            (a, b) => a.nom.toLowerCase().compareTo(b.nom.toLowerCase()),
+          );
+
+        _anneesDisponibles = annees.toList()
+          ..sort((a, b) => b.compareTo(a));
+
+        _concoursDisponibles = concours.toList()
+          ..sort(
+            (a, b) => a.toLowerCase().compareTo(b.toLowerCase()),
+          );
+      });
+    } catch (e) {
+      debugPrint('Erreur lors du chargement des filtres : $e');
+    }
+  }
+
   Future<void> _chargerSujets() async {
     if (!mounted) return;
 
@@ -114,6 +204,9 @@ class _SujetsGestionViewState extends State<SujetsGestionView> {
 
     try {
       final resultat = await _sujetViewModel.loadSujets(
+        matiere: _matiereSelectionnee,
+        concours: _concoursSelectionne,
+        anneeAcademique: _anneeSelectionnee,
         search: _searchController.text.trim(),
         page: _currentPage,
         limit: _pageSize,
@@ -129,7 +222,7 @@ class _SujetsGestionViewState extends State<SujetsGestionView> {
             sousTitre: sujet.description,
             matiere: sujet.matiereNom.isNotEmpty
                 ? sujet.matiereNom
-                : 'MatiÃ¨re non renseignÃ©e',
+                : 'Matiere non renseigner',
             concours: sujet.concours,
             annee: sujet.anneeAcademique,
             aCorrige: sujet.aCorrige,
@@ -157,36 +250,21 @@ class _SujetsGestionViewState extends State<SujetsGestionView> {
   // RECHERCHE / FILTRE
   // ============================================================
 
-  List<SujetGestionItem> get _filteredSujets {
-    final search = _searchController.text.trim().toLowerCase();
+  List<SujetGestionItem> get _filteredSujets => _sujets;
+    Future<void> _appliquerFiltre({
+    String? matiere,
+    String? annee,
+    String? concours,
+    bool reinitialiser = false,
+  }) async {
+    setState(() {
+      _matiereSelectionnee = reinitialiser ? null : matiere;
+      _anneeSelectionnee = reinitialiser ? null : annee;
+      _concoursSelectionne = reinitialiser ? null : concours;
+      _currentPage = 1;
+    });
 
-    Iterable<SujetGestionItem> result = _sujets;
-
-    if (search.isNotEmpty) {
-      result = result.where(
-        (sujet) =>
-            sujet.titre.toLowerCase().contains(search) ||
-            sujet.sousTitre.toLowerCase().contains(search) ||
-            sujet.matiere.toLowerCase().contains(search) ||
-            sujet.annee.toLowerCase().contains(search),
-      );
-    }
-
-    switch (_selectedChipIndex) {
-      case 1:
-        result = result.where((sujet) => sujet.matiere == 'MathÃ©matiques');
-        break;
-
-      case 2:
-        result = result.where((sujet) => sujet.matiere == 'Physique');
-        break;
-
-      case 3:
-        result = result.where((sujet) => sujet.annee == '2026');
-        break;
-    }
-
-    return result.toList();
+    await _chargerSujets();
   }
 
   // ============================================================
@@ -408,6 +486,332 @@ class _SujetsGestionViewState extends State<SujetsGestionView> {
   // ============================================================
   // BUILD
   // ============================================================
+  Widget _buildFilterChip({
+    required String label,
+    required bool selected,
+    required VoidCallback onSelected,
+    required Color textColor,
+    required Color inputColor,
+    required bool isDark,
+  }) {
+    return ChoiceChip(
+      label: Text(label),
+      selected: selected,
+      onSelected: (_) => onSelected(),
+      labelStyle: TextStyle(
+        fontSize: 12,
+        fontWeight: selected ? FontWeight.bold : FontWeight.w500,
+        color: selected ? Colors.white : textColor,
+      ),
+      selectedColor: primaryColor,
+      backgroundColor: inputColor,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(
+          color: selected
+              ? primaryColor
+              : (isDark ? Colors.white12 : Colors.black12),
+        ),
+      ),
+      showCheckmark: false,
+      padding: const EdgeInsets.symmetric(
+        horizontal: 10,
+        vertical: 4,
+      ),
+    );
+  }
+
+  Future<void> _ouvrirFiltres({
+    required Color textColor,
+    required Color inputColor,
+    required bool isDark,
+  }) async {
+    String? matiereTemp = _matiereSelectionnee;
+    String? anneeTemp = _anneeSelectionnee;
+    String? concoursTemp = _concoursSelectionne;
+
+    final resultat = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            return SafeArea(
+              child: Container(
+                padding: EdgeInsets.fromLTRB(
+                  20,
+                  12,
+                  20,
+                  20 + MediaQuery.of(context).viewInsets.bottom,
+                ),
+                decoration: BoxDecoration(
+                  color: isDark ? darkCardColor : Colors.white,
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(24),
+                  ),
+                ),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Center(
+                        child: Container(
+                          width: 42,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade400,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.tune_rounded,
+                            color: accentColor,
+                            size: 25,
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              'Filtrer les sujets',
+                              style: TextStyle(
+                                color: textColor,
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            onPressed: () => Navigator.pop(sheetContext),
+                            icon: Icon(Icons.close, color: textColor),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 20),
+
+                      _buildFilterDropdown<Matiere>(
+                        label: 'Matière',
+                        hint: 'Toutes les matières',
+                        value: matiereTemp == null
+                            ? null
+                            : _matieresDisponibles.cast<Matiere?>().firstWhere(
+                                  (m) => m?.id == matiereTemp,
+                                  orElse: () => null,
+                                ),
+                        items: _matieresDisponibles,
+                        itemLabel: (matiere) => matiere.nom,
+                        textColor: textColor,
+                        inputColor: inputColor,
+                        isDark: isDark,
+                        onChanged: (value) {
+                          setSheetState(() {
+                            matiereTemp = value?.id;
+                          });
+                        },
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      _buildFilterDropdown<String>(
+                        label: 'Année académique',
+                        hint: 'Toutes les années',
+                        value: anneeTemp,
+                        items: _anneesDisponibles,
+                        itemLabel: (annee) => annee,
+                        textColor: textColor,
+                        inputColor: inputColor,
+                        isDark: isDark,
+                        onChanged: (value) {
+                          setSheetState(() {
+                            anneeTemp = value;
+                          });
+                        },
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      _buildFilterDropdown<String>(
+                        label: 'Concours',
+                        hint: 'Tous les concours',
+                        value: concoursTemp,
+                        items: _concoursDisponibles,
+                        itemLabel: (concours) => concours,
+                        textColor: textColor,
+                        inputColor: inputColor,
+                        isDark: isDark,
+                        onChanged: (value) {
+                          setSheetState(() {
+                            concoursTemp = value;
+                          });
+                        },
+                      ),
+
+                      const SizedBox(height: 24),
+
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: () {
+                                setSheetState(() {
+                                  matiereTemp = null;
+                                  anneeTemp = null;
+                                  concoursTemp = null;
+                                });
+                              },
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: primaryColor,
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 14,
+                                ),
+                                side: const BorderSide(color: primaryColor),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              child: const Text('Réinitialiser'),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: () {
+                                Navigator.pop(sheetContext, true);
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: primaryColor,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 14,
+                                ),
+                                elevation: 0,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              child: const Text(
+                                'Appliquer',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+
+    if (resultat == true && mounted) {
+      setState(() {
+        _matiereSelectionnee = matiereTemp;
+        _anneeSelectionnee = anneeTemp;
+        _concoursSelectionne = concoursTemp;
+        _currentPage = 1;
+      });
+
+      await _chargerSujets();
+    }
+  }
+
+  Widget _buildFilterDropdown<T>({
+    required String label,
+    required String hint,
+    required T? value,
+    required List<T> items,
+    required String Function(T item) itemLabel,
+    required ValueChanged<T?> onChanged,
+    required Color textColor,
+    required Color inputColor,
+    required bool isDark,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            color: textColor,
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 8),
+        DropdownButtonFormField<T>(
+          key: ValueKey('$label-$value'),
+          initialValue: value,
+          isExpanded: true,
+          hint: Text(
+            hint,
+            overflow: TextOverflow.ellipsis,
+          ),
+          dropdownColor: isDark ? darkCardColor : Colors.white,
+          style: TextStyle(color: textColor, fontSize: 14),
+          icon: const Icon(
+            Icons.keyboard_arrow_down_rounded,
+            color: accentColor,
+          ),
+          decoration: InputDecoration(
+            filled: true,
+            fillColor: inputColor,
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 14,
+              vertical: 14,
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(
+                color: isDark ? Colors.white12 : Colors.black12,
+              ),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(
+                color: primaryColor,
+                width: 1.5,
+              ),
+            ),
+          ),
+          items: [
+            DropdownMenuItem<T>(
+              value: null,
+              child: Text(
+                hint,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(color: textColor),
+              ),
+            ),
+            ...items.map(
+              (item) => DropdownMenuItem<T>(
+                value: item,
+                child: Text(
+                  itemLabel(item),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ),
+          ],
+          onChanged: onChanged,
+        ),
+      ],
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -492,7 +896,7 @@ class _SujetsGestionViewState extends State<SujetsGestionView> {
               const SizedBox(height: 4),
 
               Text(
-                'Consultez et gÃ©rez les sujets disponibles.',
+                'Consultez et gerez les sujets disponibles.',
                 style: TextStyle(fontSize: 13, color: secondaryTextColor),
               ),
 
@@ -608,53 +1012,84 @@ class _SujetsGestionViewState extends State<SujetsGestionView> {
               // --------------------------------------------------
               // FILTRES
               // --------------------------------------------------
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: List.generate(_filters.length, (index) {
-                    final selected = _selectedChipIndex == index;
-
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: ChoiceChip(
-                        label: Text(_filters[index]),
-                        selected: selected,
-                        onSelected: (isSelected) {
-                          if (!isSelected) {
-                            return;
-                          }
-
-                          setState(() {
-                            _selectedChipIndex = index;
-                            _currentPage = 1;
-                          });
-                        },
-                        labelStyle: TextStyle(
-                          fontSize: 12,
-                          fontWeight: selected
-                              ? FontWeight.bold
-                              : FontWeight.w500,
-                          color: selected ? Colors.white : textColor,
-                        ),
-                        selectedColor: primaryColor,
-                        backgroundColor: inputColor,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(20),
-                          side: BorderSide(
-                            color: selected
-                                ? primaryColor
-                                : (isDark ? Colors.white12 : Colors.black12),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        _ouvrirFiltres(
+                          textColor: textColor,
+                          inputColor: inputColor,
+                          isDark: isDark,
+                        );
+                      },
+                      icon: const Icon(
+                        Icons.tune_rounded,
+                        size: 19,
+                      ),
+                      label: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Flexible(
+                            child: Text(
+                              'Filtres',
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
-                        ),
-                        showCheckmark: false,
+                          if (_nombreFiltresActifs > 0) ...[
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 7,
+                                vertical: 3,
+                              ),
+                              decoration: BoxDecoration(
+                                color: accentColor,
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Text(
+                                '$_nombreFiltresActifs',
+                                style: const TextStyle(
+                                  color: Colors.black87,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: textColor,
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 4,
+                          horizontal: 14,
+                          vertical: 12,
+                        ),
+                        side: BorderSide(
+                          color: _nombreFiltresActifs > 0
+                              ? primaryColor
+                              : (isDark ? Colors.white24 : Colors.black12),
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                    );
-                  }),
-                ),
+                    ),
+                  ),
+                  if (_nombreFiltresActifs > 0) ...[
+                    const SizedBox(width: 10),
+                    TextButton.icon(
+                      onPressed: () {
+                        _appliquerFiltre(reinitialiser: true);
+                      },
+                      icon: const Icon(Icons.restart_alt_rounded, size: 18),
+                      label: const Text('Effacer'),
+                      style: TextButton.styleFrom(
+                        foregroundColor: isDark ? Colors.white70 : primaryColor,
+                      ),
+                    ),
+                  ],
+                ],
               ),
 
               const SizedBox(height: 20),
@@ -1027,7 +1462,7 @@ class _SujetsGestionViewState extends State<SujetsGestionView> {
                       ),
                       const SizedBox(width: 5),
                       Text(
-                        'CorrigÃ© disponible',
+                        'Corriger disponible',
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.bold,
@@ -1159,7 +1594,7 @@ class _SujetsGestionViewState extends State<SujetsGestionView> {
       children: [
         Flexible(
           child: Text(
-            '$debutâ€“$fin sur $_totalSujets sujet'
+            '$debut â $fin sur $_totalSujets sujet'
             '${_totalSujets > 1 ? 's' : ''}',
             style: TextStyle(
               fontSize: 12,

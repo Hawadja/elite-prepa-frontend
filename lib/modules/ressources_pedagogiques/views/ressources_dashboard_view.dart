@@ -4,6 +4,8 @@ import '../../../core/routes/app_routes.dart';
 import '../repositories/matiere_repository.dart';
 import '../repositories/fiche_cours_repository.dart';
 import '../repositories/sujet_repository.dart';
+import '../models/fiche_cours.dart';
+import '../models/sujet.dart';
 
 class RessourcesDashboardView extends StatefulWidget {
   const RessourcesDashboardView({super.key});
@@ -31,10 +33,18 @@ class _RessourcesDashboardViewState
   int? _nombreSujets;
   int? _nombreCorriges;
 
+  // Ressources récentes récupérées depuis le backend.
+  List<FicheCours> _fichesRecentes = [];
+  List<Sujet> _sujetsRecents = [];
+
+  bool _chargementRessourcesRecentes = true;
+  String? _erreurRessourcesRecentes;
+
   @override
   void initState() {
     super.initState();
     _chargerStatistiques();
+    _chargerRessourcesRecentes();
   }
 
   Future<void> _chargerStatistiques() async {
@@ -90,6 +100,135 @@ class _RessourcesDashboardViewState
     }
   }
 
+  Future<void> _chargerRessourcesRecentes() async {
+    if (!mounted) return;
+
+    setState(() {
+      _chargementRessourcesRecentes = true;
+      _erreurRessourcesRecentes = null;
+    });
+
+    try {
+      final resultats = await Future.wait([
+        _ficheCoursRepository.getFichesCours(
+          page: 1,
+          limit: 5,
+        ),
+        _sujetRepository.getSujetsPage(
+          page: 1,
+          limit: 5,
+          sort: 'dateAjout',
+          order: 'desc',
+        ),
+      ]);
+
+      final resultatFiches =
+          resultats[0] as Map<String, dynamic>;
+
+      final resultatSujets = resultats[1] as dynamic;
+
+      final fiches = List<FicheCours>.from(
+        resultatFiches['data'] as List,
+      );
+
+      final sujets = List<Sujet>.from(
+        resultatSujets.items as List,
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        _fichesRecentes = fiches;
+        _sujetsRecents = sujets;
+        _chargementRessourcesRecentes = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        _erreurRessourcesRecentes =
+            'Impossible de charger les ressources récentes.';
+        _chargementRessourcesRecentes = false;
+      });
+
+      debugPrint('Erreur des ressources récentes : $e');
+    }
+  }
+
+  List<Widget> _construireCartesRecentes(bool isDark) {
+    final List<Map<String, dynamic>> ressources = [];
+
+    for (final fiche in _fichesRecentes) {
+      ressources.add({
+        'titre': fiche.titre,
+        'matiere': fiche.matiereNom,
+        'type': 'Fiche de cours',
+        'date': fiche.dateAjout,
+        'icon': Icons.menu_book_outlined,
+      });
+    }
+
+    for (final sujet in _sujetsRecents) {
+      ressources.add({
+        'titre': sujet.titre,
+        'matiere': sujet.matiereNom,
+        'type': sujet.aCorrige
+            ? 'Sujet · Corrigé disponible'
+            : 'Sujet de concours',
+        'date': sujet.dateAjout,
+        'icon': Icons.picture_as_pdf_outlined,
+      });
+    }
+
+    ressources.sort((a, b) {
+      final DateTime? dateA = a['date'] as DateTime?;
+      final DateTime? dateB = b['date'] as DateTime?;
+
+      if (dateA == null && dateB == null) return 0;
+      if (dateA == null) return 1;
+      if (dateB == null) return -1;
+
+      return dateB.compareTo(dateA);
+    });
+
+    final recentes = ressources.take(5).toList();
+
+    return [
+      for (int i = 0; i < recentes.length; i++) ...[
+        _ContentCard(
+          title: recentes[i]['titre'] as String,
+          subtitle: _formaterSousTitre(recentes[i]),
+          icon: recentes[i]['icon'] as IconData,
+        ),
+        if (i < recentes.length - 1)
+          const SizedBox(height: 10),
+      ],
+    ];
+  }
+
+  String _formaterSousTitre(Map<String, dynamic> ressource) {
+    final matiere = (ressource['matiere'] as String).trim();
+    final type = ressource['type'] as String;
+    final date = ressource['date'] as DateTime?;
+
+    final informations = <String>[];
+
+    if (matiere.isNotEmpty) {
+      informations.add(matiere);
+    }
+
+    informations.add(type);
+
+    if (date != null) {
+      final jour = date.day.toString().padLeft(2, '0');
+      final mois = date.month.toString().padLeft(2, '0');
+
+      informations.add('Ajoutée le $jour/$mois/${date.year}');
+    }
+
+    return informations.join(' · ');
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -132,23 +271,35 @@ appBar: AppBar(
   title: const Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      Text(
-        'Ressources',
-        style: TextStyle(
-          fontSize: 18,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-      Text(
-        'Dashboard · Elite-Prepa',
-        style: TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.normal,
-        ),
-      ),
+    Text(
+    'Ressources',
+    style: TextStyle(
+    fontSize: 18,
+    fontWeight: FontWeight.bold,
+    ),
+    ),
+    Text(
+    'Dashboard · Elite-Prepa',
+    style: TextStyle(
+    fontSize: 12,
+    fontWeight: FontWeight.normal,
+    ),
+    ),
+    ],
+    ),
+
+    // Bouton d'actualisation à droite
+    actions: [
+    IconButton(
+    tooltip: 'Actualiser les ressources',
+    icon: const Icon(Icons.refresh),
+    onPressed: _chargerStatistiques,
+    ),
+    const SizedBox(width: 8),
     ],
   ),
-),
+
+
 
       // ============================================================
       // CONTENU
@@ -293,27 +444,68 @@ appBar: AppBar(
 
               const SizedBox(height: 10),
 
-              // ======================================================
-              // RESSOURCE 1
-              // ======================================================
-              const _ContentCard(
-                title: 'Limites et contenu',
-                subtitle: 'Mathématiques · ajoutée aujourd’hui',
-                icon: Icons.menu_book_outlined,
-              ),
+              if (_chargementRessourcesRecentes)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 24),
+                    child: Center(
+                      child: CircularProgressIndicator(
+                        color: RessourcesDashboardView.accentColor,
+                      ),
+                    ),
+                  )
+                else if (_erreurRessourcesRecentes != null)
+                  Card(
+                    margin: EdgeInsets.zero,
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        children: [
+                          const Icon(
+                            Icons.cloud_off_outlined,
+                            color: RessourcesDashboardView.accentColor,
+                            size: 30,
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            _erreurRessourcesRecentes!,
+                            textAlign: TextAlign.center,
+                          ),
+                          TextButton.icon(
+                            onPressed: _chargerRessourcesRecentes,
+                            icon: const Icon(Icons.refresh),
+                            label: const Text('Réessayer'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                else if (_fichesRecentes.isEmpty && _sujetsRecents.isEmpty)
+                  Card(
+                    margin: EdgeInsets.zero,
+                    child: Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        children: [
+                          const Icon(
+                            Icons.library_books_outlined,
+                            size: 36,
+                            color: RessourcesDashboardView.accentColor,
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Aucune ressource disponible',
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: isDark ? Colors.white70 : Colors.black54,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                else
+                  ..._construireCartesRecentes(isDark),
 
-              const SizedBox(height: 10),
-
-              // ======================================================
-              // RESSOURCE 2
-              // ======================================================
-              const _ContentCard(
-                title: 'Sujet CentraleSupélec 2025 · Corrigé',
-                subtitle: 'Physique · corrigé disponible',
-                icon: Icons.picture_as_pdf_outlined,
-              ),
-
-              const SizedBox(height: 16),
+                const SizedBox(height: 16),
 
               // ======================================================
               // VOIR TOUTES LES RESSOURCES

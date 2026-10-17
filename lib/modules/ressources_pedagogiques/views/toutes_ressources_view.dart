@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/routes/app_routes.dart';
 
@@ -99,7 +100,7 @@ class ToutesRessourcesView extends StatelessWidget {
                   ressource: ressource,
                   isDark: isDark,
                   onTap: () {
-                    Navigator.pushNamed(context, ressource.route);
+                    context.push(ressource.route);
                   },
                 ),
               ),
@@ -152,7 +153,10 @@ class _RessourceCard extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(16),
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.symmetric(
+            horizontal: 18,
+            vertical: 20,
+          ),
           child: Row(
             children: [
               Container(
