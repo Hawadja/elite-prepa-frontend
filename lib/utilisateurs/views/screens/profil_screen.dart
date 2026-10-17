@@ -9,6 +9,7 @@ import '../../models/user_model.dart';
 import '../../repository/profil_repository.dart';
 import '../../viewmodels/auth_cubit.dart';
 import '../../viewmodels/profil_cubit.dart';
+import '../../../core/theme/theme_cubit.dart';
 
 class ProfilScreen extends StatelessWidget {
   final String userId;
@@ -218,10 +219,16 @@ class _ProfilViewState extends State<_ProfilView> {
                   const SizedBox(height: 32),
 
                   // Mode affichage / Formulaire édition
+                  // Mode affichage / Formulaire édition
                   if (!_isEditing)
                     _buildReadOnlyView(profil, user)
                   else
                     _buildEditableForm(profil),
+
+                  if (!_isEditing) ...[
+                    const SizedBox(height: 24),
+                    _buildAppearanceSection(),
+                  ],
 
                   if (_isEditing) ...[
                     const SizedBox(height: 32),
@@ -253,151 +260,197 @@ class _ProfilViewState extends State<_ProfilView> {
             );
           }
 
-          if (state is ProfilNotFound) {
-            final notFoundFormKey = GlobalKey<FormBuilderState>();
-            return Center(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(24.0),
-                child: FormBuilder(
-                  key: notFoundFormKey,
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.person_add_alt_1,
-                          size: 56, color: navyColor),
-                      const SizedBox(height: 16),
-                      const Text(
-                        'Complétez votre profil',
-                        style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: navyColor),
+        if (state is ProfilNotFound) {
+          final notFoundFormKey = GlobalKey<FormBuilderState>();
+
+          return Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24.0),
+              child: FormBuilder(
+                key: notFoundFormKey,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      Icons.person_add_alt_1,
+                      size: 56,
+                      color: navyColor,
+                    ),
+                    const SizedBox(height: 16),
+
+                    const Text(
+                      'Complétez votre profil',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: navyColor,
                       ),
-                      const SizedBox(height: 24),
-                      FormBuilderTextField(
-                        name: 'nom',
-                        decoration: _inputDecoration(
-                            label: 'Nom', icon: Icons.person_outline),
-                        validator: FormBuilderValidators.required(
-                            errorText: 'Le nom est requis'),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Nom
+                    FormBuilderTextField(
+                      name: 'nom',
+                      decoration: _inputDecoration(
+                        label: 'Nom',
+                        icon: Icons.person_outline,
                       ),
-                      const SizedBox(height: 16),
-                      FormBuilderTextField(
-                        name: 'prenom',
-                        decoration: _inputDecoration(
-                            label: 'Prénom', icon: Icons.person_outline),
-                        validator: FormBuilderValidators.required(
-                            errorText: 'Le prénom est requis'),
+                      validator: FormBuilderValidators.required(
+                        errorText: 'Le nom est requis',
                       ),
-                      const SizedBox(height: 16),
-                      FormBuilderTextField(
-                        name: 'telephone',
-                        keyboardType: TextInputType.phone,
-                        decoration: _inputDecoration(
-                            label: 'Numéro de téléphone',
-                            icon: Icons.phone_outlined),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Prénom
+                    FormBuilderTextField(
+                      name: 'prenom',
+                      decoration: _inputDecoration(
+                        label: 'Prénom',
+                        icon: Icons.person_outline,
                       ),
-                      const SizedBox(height: 16),
-                      FormBuilderTextField(
-                        name: 'ville',
-                        decoration: _inputDecoration(
-                            label: 'Ville',
-                            icon: Icons.location_city_outlined),
+                      validator: FormBuilderValidators.required(
+                        errorText: 'Le prénom est requis',
                       ),
-                      const SizedBox(height: 16),
-                      FormBuilderTextField(
-                        name: 'lieuDeNaissance',
-                        decoration: _inputDecoration(
-                            label: 'Lieu de naissance',
-                            icon: Icons.place_outlined),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Téléphone
+                    FormBuilderTextField(
+                      name: 'telephone',
+                      keyboardType: TextInputType.phone,
+                      decoration: _inputDecoration(
+                        label: 'Numéro de téléphone',
+                        icon: Icons.phone_outlined,
                       ),
-                      const SizedBox(height: 16),
-                      FormBuilderField<DateTime>(
-                        name: 'dateNaissance',
-                        builder: (FormFieldState<DateTime> field) {
-                          final date = field.value;
-                          final dateStr = date != null
-                              ? '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}'
-                              : '';
-                          return InkWell(
-                            onTap: () async {
-                              final picked = await showDatePicker(
-                                context: context,
-                                initialDate: date ?? DateTime(2000, 1, 1),
-                                firstDate: DateTime(1920),
-                                lastDate: DateTime.now(),
-                              );
-                              if (picked != null) {
-                                field.didChange(picked);
-                              }
-                            },
-                            child: InputDecorator(
-                              decoration: _inputDecoration(
-                                label: 'Date de naissance',
-                                icon: Icons.cake_outlined,
-                              ).copyWith(
-                                suffixIcon: date != null
-                                    ? IconButton(
-                                        icon: const Icon(Icons.clear, size: 20),
-                                        onPressed: () => field.didChange(null),
-                                      )
-                                    : const Icon(Icons.calendar_today_outlined,
-                                        size: 20),
-                              ),
-                              child: Text(
-                                dateStr.isNotEmpty
-                                    ? dateStr
-                                    : 'Sélectionner une date',
-                                style: TextStyle(
-                                  color: dateStr.isNotEmpty
-                                      ? Colors.black87
-                                      : Colors.grey,
-                                  fontSize: 15,
-                                ),
-                              ),
-                            ),
-                          );
-                        },
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Ville
+                    FormBuilderTextField(
+                      name: 'ville',
+                      decoration: _inputDecoration(
+                        label: 'Ville',
+                        icon: Icons.location_city_outlined,
                       ),
-                      const SizedBox(height: 24),
-                      SizedBox(
-                        width: double.infinity,
-                        height: 52,
-                        child: ElevatedButton(
-                          onPressed: () {
-                            if (notFoundFormKey.currentState
-                                    ?.saveAndValidate() ??
-                                false) {
-                              final values =
-                                  notFoundFormKey.currentState!.value;
-                              context.read<ProfilCubit>().createProfil(
-                                    widget.userId,
-                                    (values['nom'] as String).trim(),
-                                    (values['prenom'] as String).trim(),
-                                    telephone: (values['telephone'] as String?)
-                                        ?.trim(),
-                                    ville:
-                                        (values['ville'] as String?)?.trim(),
-                                    lieuDeNaissance:
-                                        (values['lieuDeNaissance'] as String?)
-                                            ?.trim(),
-                                    dateNaissance:
-                                        values['dateNaissance'] as DateTime?,
-                                  );
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Lieu de naissance
+                    FormBuilderTextField(
+                      name: 'lieuDeNaissance',
+                      decoration: _inputDecoration(
+                        label: 'Lieu de naissance',
+                        icon: Icons.place_outlined,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Date de naissance
+                    FormBuilderField<DateTime>(
+                      name: 'dateNaissance',
+                      builder: (FormFieldState<DateTime> field) {
+                        final date = field.value;
+
+                        final dateStr = date != null
+                            ? '${date.day.toString().padLeft(2, '0')}/'
+                                '${date.month.toString().padLeft(2, '0')}/'
+                                '${date.year}'
+                            : '';
+
+                        return InkWell(
+                          onTap: () async {
+                            final picked = await showDatePicker(
+                              context: context,
+                              initialDate: date ?? DateTime(2000, 1, 1),
+                              firstDate: DateTime(1920),
+                              lastDate: DateTime.now(),
+                            );
+
+                            if (picked != null) {
+                              field.didChange(picked);
                             }
                           },
-                          style: ElevatedButton.styleFrom(
-                              backgroundColor: navyColor),
-                          child: const Text('Créer mon profil',
-                              style: TextStyle(color: Colors.white)),
+                          child: InputDecorator(
+                            decoration: _inputDecoration(
+                              label: 'Date de naissance',
+                              icon: Icons.cake_outlined,
+                            ).copyWith(
+                              suffixIcon: date != null
+                                  ? IconButton(
+                                      icon: const Icon(
+                                        Icons.clear,
+                                        size: 20,
+                                      ),
+                                      onPressed: () => field.didChange(null),
+                                    )
+                                  : const Icon(
+                                      Icons.calendar_today_outlined,
+                                      size: 20,
+                                    ),
+                            ),
+                            child: Text(
+                              dateStr.isNotEmpty
+                                  ? dateStr
+                                  : 'Sélectionner une date',
+                              style: TextStyle(
+                                color: dateStr.isNotEmpty
+                                    ? Colors.black87
+                                    : Colors.grey,
+                                fontSize: 15,
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+
+                    const SizedBox(height: 24),
+
+                    // Bouton de création du profil
+                    SizedBox(
+                      width: double.infinity,
+                      height: 52,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          if (notFoundFormKey.currentState?.saveAndValidate() ??
+                              false) {
+                            final values = notFoundFormKey.currentState!.value;
+
+                            context.read<ProfilCubit>().createProfil(
+                                  widget.userId,
+                                  (values['nom'] as String).trim(),
+                                  (values['prenom'] as String).trim(),
+                                  telephone:
+                                      (values['telephone'] as String?)?.trim(),
+                                  ville: (values['ville'] as String?)?.trim(),
+                                  lieuDeNaissance:
+                                      (values['lieuDeNaissance'] as String?)?.trim(),
+                                  dateNaissance:
+                                      values['dateNaissance'] as DateTime?,
+                                );
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: navyColor,
+                        ),
+                        child: const Text(
+                          'Créer mon profil',
+                          style: TextStyle(color: Colors.white),
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+
+                    // Section Apparence
+                    const SizedBox(height: 24),
+                    _buildAppearanceSection(),
+                  ],
                 ),
               ),
-            );
-          }
+            ),
+          );
+        }
+
+
 
           return Center(
             child: ElevatedButton(
@@ -410,6 +463,78 @@ class _ProfilViewState extends State<_ProfilView> {
           );
         },
       ),
+    );
+  }
+
+  Widget _buildAppearanceSection() {
+    return BlocBuilder<ThemeCubit, ThemeMode>(
+      builder: (context, themeMode) {
+        return Card(
+          elevation: 1,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Row(
+                  children: [
+                    Icon(Icons.palette_outlined, color: goldColor),
+                    SizedBox(width: 10),
+                    Text(
+                      'Apparence',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Choisissez le thème de votre application.',
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                RadioGroup<ThemeMode>(
+                  groupValue: themeMode,
+                  onChanged: (value) {
+                    if (value != null) {
+                      context.read<ThemeCubit>().changeTheme(value);
+                    }
+                  },
+                  child: const Column(
+                    children: [
+                      RadioListTile<ThemeMode>(
+                        value: ThemeMode.light,
+                        secondary: Icon(Icons.light_mode_outlined),
+                        title: Text('Mode clair'),
+                        subtitle: Text('Fond clair et cartes blanches'),
+                      ),
+                      RadioListTile<ThemeMode>(
+                        value: ThemeMode.dark,
+                        secondary: Icon(Icons.dark_mode_outlined),
+                        title: Text('Mode sombre'),
+                        subtitle: Text('Fond bleu nuit et texte clair'),
+                      ),
+                      RadioListTile<ThemeMode>(
+                        value: ThemeMode.system,
+                        secondary: Icon(Icons.settings_brightness_outlined),
+                        title: Text('Mode système'),
+                        subtitle: Text('Suit le thème du téléphone'),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
