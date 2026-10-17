@@ -1,9 +1,10 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 
 import 'dart:async';
 
 import '../../../core/routes/app_routes.dart';
 import '../viewmodels/sujet_viewmodel.dart';
+import '../repositories/sujet_repository.dart';
 import 'telecharger_corrige_view.dart';
 import 'package:go_router/go_router.dart';
 import '../services/pdf_share_service.dart';
@@ -13,6 +14,7 @@ class SujetGestionItem {
   final String titre;
   final String sousTitre;
   final String matiere;
+  final String matiereId;
   final String concours;
   final String annee;
   final bool aCorrige;
@@ -22,6 +24,7 @@ class SujetGestionItem {
     required this.titre,
     required this.sousTitre,
     required this.matiere,
+    required this.matiereId,
     required this.concours,
     required this.annee,
     this.aCorrige = true,
@@ -51,7 +54,7 @@ class _SujetsGestionViewState extends State<SujetsGestionView> {
   static const Color deleteRed = Color(0xFFD9534F);
 
   // ============================================================
-  // ÉTAT
+  // Ã‰TAT
   // ============================================================
 
   int _currentIndex = 2;
@@ -64,10 +67,11 @@ class _SujetsGestionViewState extends State<SujetsGestionView> {
   final List<String> _filters = ['Tous', 'Maths', 'Physique', '2026'];
 
   // ============================================================
-  // DONNÉES DU BACKEND
+  // DONNÃ‰ES DU BACKEND
   // ============================================================
 
   final SujetViewModel _sujetViewModel = SujetViewModel();
+  final SujetRepository _sujetRepository = SujetRepository();
 
   List<SujetGestionItem> _sujets = [];
 
@@ -125,10 +129,11 @@ class _SujetsGestionViewState extends State<SujetsGestionView> {
             sousTitre: sujet.description,
             matiere: sujet.matiereNom.isNotEmpty
                 ? sujet.matiereNom
-                : 'Matière non renseignée',
+                : 'MatiÃ¨re non renseignÃ©e',
             concours: sujet.concours,
             annee: sujet.anneeAcademique,
             aCorrige: sujet.aCorrige,
+            matiereId: sujet.matiereId,
           );
         }).toList();
 
@@ -169,7 +174,7 @@ class _SujetsGestionViewState extends State<SujetsGestionView> {
 
     switch (_selectedChipIndex) {
       case 1:
-        result = result.where((sujet) => sujet.matiere == 'Mathématiques');
+        result = result.where((sujet) => sujet.matiere == 'MathÃ©matiques');
         break;
 
       case 2:
@@ -194,7 +199,7 @@ class _SujetsGestionViewState extends State<SujetsGestionView> {
     final result = await context.push<bool>(AppRoutes.addEditSujet);
 
     if (result == true && mounted) {
-      // Revenir à la première page pour afficher le sujet ajouté.
+      // Revenir Ã  la premiÃ¨re page pour afficher le sujet ajoutÃ©.
       setState(() {
         _currentPage = 1;
       });
@@ -208,14 +213,14 @@ class _SujetsGestionViewState extends State<SujetsGestionView> {
   // MODIFIER
   // ============================================================
 
+
   Future<void> _onModifierSujet(SujetGestionItem sujet) async {
-    final result = await Navigator.pushNamed(
-      context,
+    final result = await context.push<bool>(
       AppRoutes.addEditSujet,
-      arguments: {
+      extra: {
         'id': sujet.id,
         'titre': sujet.titre,
-        'matiere': sujet.matiere,
+        'matiereId': sujet.matiereId,
         'description': sujet.sousTitre,
         'concours': sujet.concours,
         'anneeAcademique': sujet.annee,
@@ -224,9 +229,10 @@ class _SujetsGestionViewState extends State<SujetsGestionView> {
     );
 
     if (result == true && mounted) {
-      setState(() {});
+      await _chargerSujets();
     }
   }
+
 
   // ============================================================
   // VOIR
@@ -244,7 +250,7 @@ class _SujetsGestionViewState extends State<SujetsGestionView> {
 
 
   // ============================================================
-  // TÉLÉCHARGER
+  // TÃ‰LÃ‰CHARGER
   // ============================================================
 
   void _onTelechargerSujet(SujetGestionItem sujet) {
@@ -309,22 +315,22 @@ class _SujetsGestionViewState extends State<SujetsGestionView> {
           ),
           content: Text(
             'Voulez-vous vraiment supprimer « ${sujet.titre} » ?',
-            style: TextStyle(color: isDark ? Colors.white70 : Colors.black54),
+            style: TextStyle(
+              color: isDark ? Colors.white70 : Colors.black54,
+            ),
           ),
           actions: [
             TextButton(
-              onPressed: () {
-                Navigator.pop(dialogContext, false);
-              },
+              onPressed: () => Navigator.pop(dialogContext, false),
               child: Text(
                 'Annuler',
-                style: TextStyle(color: isDark ? Colors.white70 : primaryColor),
+                style: TextStyle(
+                  color: isDark ? Colors.white70 : primaryColor,
+                ),
               ),
             ),
             ElevatedButton(
-              onPressed: () {
-                Navigator.pop(dialogContext, true);
-              },
+              onPressed: () => Navigator.pop(dialogContext, true),
               style: ElevatedButton.styleFrom(
                 backgroundColor: deleteRed,
                 foregroundColor: Colors.white,
@@ -337,21 +343,35 @@ class _SujetsGestionViewState extends State<SujetsGestionView> {
       },
     );
 
-    if (confirmed != true || !mounted) {
-      return;
+    if (confirmed != true || !mounted) return;
+
+    try {
+      await _sujetRepository.deleteSujet(sujet.id);
+
+      if (!mounted) return;
+
+      await _chargerSujets();
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Sujet supprimé avec succès'),
+          backgroundColor: Colors.green,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Impossible de supprimer le sujet : $e'),
+          backgroundColor: deleteRed,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
     }
-
-    setState(() {
-      _sujets.removeWhere((item) => item.id == sujet.id);
-    });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Sujet supprimé avec succès'),
-        backgroundColor: Colors.green,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
   }
 
   // ============================================================
@@ -374,7 +394,7 @@ class _SujetsGestionViewState extends State<SujetsGestionView> {
         break;
 
       case 2:
-        // Nous sommes déjà sur l'écran de gestion des sujets.
+        // Nous sommes dÃ©jÃ  sur l'Ã©cran de gestion des sujets.
         break;
 
       case 3:
@@ -439,7 +459,7 @@ class _SujetsGestionViewState extends State<SujetsGestionView> {
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             Text(
-              'Ressources · Elite-Prepa',
+              'Ressources Â· Elite-Prepa',
               style: TextStyle(fontSize: 12, fontWeight: FontWeight.normal),
             ),
           ],
@@ -472,7 +492,7 @@ class _SujetsGestionViewState extends State<SujetsGestionView> {
               const SizedBox(height: 4),
 
               Text(
-                'Consultez et gérez les sujets disponibles.',
+                'Consultez et gÃ©rez les sujets disponibles.',
                 style: TextStyle(fontSize: 13, color: secondaryTextColor),
               ),
 
@@ -640,7 +660,7 @@ class _SujetsGestionViewState extends State<SujetsGestionView> {
               const SizedBox(height: 20),
 
               // --------------------------------------------------
-              // EN-TÊTE LISTE
+              // EN-TÃŠTE LISTE
               // --------------------------------------------------
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -702,7 +722,7 @@ class _SujetsGestionViewState extends State<SujetsGestionView> {
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        'Vérifiez la connexion au serveur puis réessayez.',
+                        'Verifiez la connexion au serveur puis ressayez.',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 12,
@@ -713,7 +733,7 @@ class _SujetsGestionViewState extends State<SujetsGestionView> {
                       ElevatedButton.icon(
                         onPressed: _chargerSujets,
                         icon: const Icon(Icons.refresh),
-                        label: const Text('Réessayer'),
+                        label: const Text('Ressayer'),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: accentColor,
                           foregroundColor: Colors.black87,
@@ -774,7 +794,7 @@ class _SujetsGestionViewState extends State<SujetsGestionView> {
           NavigationDestination(
             icon: Icon(Icons.menu_book_outlined),
             selectedIcon: Icon(Icons.menu_book),
-            label: 'Révisions',
+            label: 'Revisions',
           ),
           NavigationDestination(
             icon: Icon(Icons.school_outlined),
@@ -887,7 +907,7 @@ class _SujetsGestionViewState extends State<SujetsGestionView> {
                             color: Colors.black,
                           ),
                           SizedBox(width: 10),
-                          Text('Télécharger'),
+                          Text('Telecharger'),
                         ],
                       ),
                     ),
@@ -1007,7 +1027,7 @@ class _SujetsGestionViewState extends State<SujetsGestionView> {
                       ),
                       const SizedBox(width: 5),
                       Text(
-                        'Corrigé disponible',
+                        'CorrigÃ© disponible',
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.bold,
@@ -1064,7 +1084,7 @@ class _SujetsGestionViewState extends State<SujetsGestionView> {
   // ============================================================
 
   // ============================================================
-  // ÉTAT VIDE
+  // Ã‰TAT VIDE
   // ============================================================
 
   Widget _buildEmptyState({
@@ -1089,7 +1109,7 @@ class _SujetsGestionViewState extends State<SujetsGestionView> {
           ),
           const SizedBox(height: 12),
           Text(
-            'Aucun sujet trouvé',
+            'Aucun sujet trouver',
             style: TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.bold,
@@ -1139,7 +1159,7 @@ class _SujetsGestionViewState extends State<SujetsGestionView> {
       children: [
         Flexible(
           child: Text(
-            '$debut–$fin sur $_totalSujets sujet'
+            '$debutâ€“$fin sur $_totalSujets sujet'
             '${_totalSujets > 1 ? 's' : ''}',
             style: TextStyle(
               fontSize: 12,
@@ -1228,7 +1248,7 @@ class _SujetsGestionViewState extends State<SujetsGestionView> {
   }
 
   // ============================================================
-  // NUMÉRO DE PAGE
+  // NUMÃ‰RO DE PAGE
   // ============================================================
 
   Widget _buildPageNumberButton({

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '../routes/app_routes.dart';
@@ -227,7 +227,23 @@ class AppRouter {
       // ============================================================
       GoRoute(
         path: AppRoutes.addEditSujet,
-        builder: (context, state) => const AddEditSujetView(),
+        builder: (context, state) {
+          final extra = state.extra;
+
+          if (extra is Map) {
+            return AddEditSujetView(
+              id: extra['id']?.toString(),
+              titre: extra['titre']?.toString(),
+              matiereId: extra['matiereId']?.toString(),
+              description: extra['description']?.toString(),
+              concours: extra['concours']?.toString(),
+              anneeAcademique: extra['anneeAcademique']?.toString(),
+              nomFichier: extra['nomFichier']?.toString(),
+            );
+          }
+
+          return const AddEditSujetView();
+        },
       ),
 
       GoRoute(
@@ -355,7 +371,7 @@ class HomeScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
       appBar: AppBar(
-        title: const Text('Elite Prépa - Accueil'),
+        title: const Text('Elite PrÃ©pa - Accueil'),
         backgroundColor: navyColor,
         foregroundColor: Colors.white,
         actions: [
@@ -374,7 +390,7 @@ class HomeScreen extends StatelessWidget {
             onPressed: () {
               context.read<AuthCubit>().logout();
             },
-            tooltip: 'Déconnexion',
+            tooltip: 'DÃ©connexion',
           ),
         ],
       ),
@@ -399,7 +415,7 @@ class HomeScreen extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Bienvenue sur Elite Prépa !',
+                      'Bienvenue sur Elite PrÃ©pa !',
                       style: TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
@@ -408,7 +424,7 @@ class HomeScreen extends StatelessWidget {
                     ),
                     SizedBox(height: 8),
                     Text(
-                      'Votre plateforme de gestion et de prépa.',
+                      'Votre plateforme de gestion et de prÃ©pa.',
                       style: TextStyle(
                         fontSize: 14,
                         color: Colors.white70,
@@ -429,7 +445,7 @@ class HomeScreen extends StatelessWidget {
               const SizedBox(height: 16),
               ListTile(
                 leading: const Icon(Icons.account_circle, color: goldColor),
-                title: const Text('Gérer mon profil'),
+                title: const Text('GÃ©rer mon profil'),
                 subtitle: const Text('Consulter et modifier mes informations'),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () {
@@ -451,3 +467,4 @@ class HomeScreen extends StatelessWidget {
     );
   }
 }
+

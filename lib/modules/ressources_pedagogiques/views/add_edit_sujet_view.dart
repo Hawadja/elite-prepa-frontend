@@ -1,4 +1,4 @@
-import 'package:file_picker/file_picker.dart';
+﻿import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import '../models/matiere.dart';
 import '../repositories/matiere_repository.dart';
@@ -6,7 +6,26 @@ import 'package:go_router/go_router.dart';
 import '../repositories/sujet_repository.dart';
 
 class AddEditSujetView extends StatefulWidget {
-  const AddEditSujetView({super.key});
+  const AddEditSujetView({
+    super.key,
+    this.id,
+    this.titre,
+    this.matiereId,
+    this.description,
+    this.concours,
+    this.anneeAcademique,
+    this.nomFichier,
+  });
+
+  final String? id;
+  final String? titre;
+  final String? matiereId;
+  final String? description;
+  final String? concours;
+  final String? anneeAcademique;
+  final String? nomFichier;
+
+  bool get isEditing => id != null && id!.trim().isNotEmpty;
 
   @override
   State<AddEditSujetView> createState() => _AddEditSujetViewState();
@@ -63,7 +82,7 @@ class _AddEditSujetViewState extends State<AddEditSujetView> {
       if (fichier.size > 10 * 1024 * 1024) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Le fichier ne doit pas dépasser 10 Mo.'),
+            content: Text('Le fichier ne doit pas depasser 10 Mo.'),
             backgroundColor: Colors.red,
           ),
         );
@@ -82,7 +101,7 @@ class _AddEditSujetViewState extends State<AddEditSujetView> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Impossible de sélectionner le fichier : $e'),
+          content: Text('Impossible de selectionner le fichier : $e'),
           backgroundColor: Colors.red,
         ),
       );
@@ -112,14 +131,14 @@ class _AddEditSujetViewState extends State<AddEditSujetView> {
       _matiereSelectionnee!.isEmpty) {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Veuillez sélectionner une matière.'),
+        content: Text('Veuillez selectionner une matiere.'),
         backgroundColor: Colors.red,
       ),
     );
     return;
   }
 
-  if (_fichierSujet == null) {
+  if (!widget.isEditing && _fichierSujet == null) {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Veuillez sélectionner le PDF du sujet.'),
@@ -134,26 +153,43 @@ class _AddEditSujetViewState extends State<AddEditSujetView> {
   });
 
   try {
-    await _sujetRepository.createSujet(
-      titre: _titreController.text.trim(),
-      description: _descriptionController.text.trim(),
-      matiereId: _matiereSelectionnee!,
-      concours: _concoursController.text.trim(),
-      anneeAcademique: _anneeController.text.trim(),
-      fichier: _fichierSujet!,
-      corrige: _fichierCorrige,
-    );
+    if (widget.isEditing) {
+      await _sujetRepository.updateSujet(
+        id: widget.id!,
+        titre: _titreController.text.trim(),
+        description: _descriptionController.text.trim(),
+        matiereId: _matiereSelectionnee!,
+        concours: _concoursController.text.trim(),
+        anneeAcademique: _anneeController.text.trim(),
+        fichier: _fichierSujet,
+        corrige: _fichierCorrige,
+      );
+          } else {
+      await _sujetRepository.createSujet(
+        titre: _titreController.text.trim(),
+        description: _descriptionController.text.trim(),
+        matiereId: _matiereSelectionnee!,
+        concours: _concoursController.text.trim(),
+        anneeAcademique: _anneeController.text.trim(),
+        fichier: _fichierSujet!,
+        corrige: _fichierCorrige,
+      );
+    }
 
     if (!mounted) return;
 
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Sujet ajouté avec succès !'),
+      SnackBar(
+        content: Text(
+          widget.isEditing
+              ? 'Sujet modifié avec succès !'
+              : 'Sujet ajouté avec succès !',
+        ),
         backgroundColor: Colors.green,
       ),
     );
 
-    context.pop(true);
+  context.pop(true);
   } catch (e) {
     if (!mounted) return;
 
@@ -161,7 +197,7 @@ class _AddEditSujetViewState extends State<AddEditSujetView> {
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Échec de l’enregistrement : $message'),
+        content: Text("Fchec de l'enenregistrement : $message"),
         backgroundColor: Colors.red,
         duration: const Duration(seconds: 5),
       ),
@@ -270,7 +306,7 @@ class _AddEditSujetViewState extends State<AddEditSujetView> {
                       controller: _titreController,
                       textCapitalization: TextCapitalization.sentences,
                       decoration: _inputDecoration(
-                        hint: 'Ex. : Épreuve de mathématiques 2026',
+                        hint: 'Ex. : Ã‰preuve de mathÃ©matiques 2026',
                         icon: Icons.title_rounded,
                         isDark: isDark,
                       ),
@@ -292,7 +328,7 @@ class _AddEditSujetViewState extends State<AddEditSujetView> {
                       maxLines: 5,
                       textCapitalization: TextCapitalization.sentences,
                       decoration: _inputDecoration(
-                        hint: 'Décrivez brièvement le sujet...',
+                        hint: 'DÃ©crivez briÃ¨vement le sujet...',
                         icon: Icons.description_outlined,
                         isDark: isDark,
                       ),
@@ -306,7 +342,7 @@ class _AddEditSujetViewState extends State<AddEditSujetView> {
 
                     const SizedBox(height: 20),
 
-                    _buildLabel('Matière *', textColor),
+                    _buildLabel('MatiÃ¨re *', textColor),
                     const SizedBox(height: 8),
                     
                     if (_chargementMatieres)
@@ -333,13 +369,13 @@ class _AddEditSujetViewState extends State<AddEditSujetView> {
                               _chargerMatieres();
                             },
                             icon: const Icon(Icons.refresh),
-                            label: const Text('Réessayer'),
+                            label: const Text('RÃ©essayer'),
                           ),
                         ],
                       )
                     else if (_matieres.isEmpty)
                       const Text(
-                        'Aucune matière disponible.',
+                        'Aucune matiÃ¨re disponible.',
                         style: TextStyle(color: Colors.orange),
                       )
                     else
@@ -347,7 +383,7 @@ class _AddEditSujetViewState extends State<AddEditSujetView> {
                         initialValue: _matiereSelectionnee,
                         isExpanded: true,
                         decoration: _inputDecoration(
-                          hint: 'Sélectionner une matière',
+                          hint: 'SÃ©lectionner une matiÃ¨re',
                           icon: Icons.school_outlined,
                           isDark: isDark,
                         ),
@@ -364,7 +400,7 @@ class _AddEditSujetViewState extends State<AddEditSujetView> {
                         },
                         validator: (value) {
                           if (value == null || value.isEmpty) {
-                            return 'Veuillez sélectionner une matière.';
+                            return 'Veuillez sÃ©lectionner une matiÃ¨re.';
                           }
                           return null;
                         },
@@ -392,7 +428,7 @@ class _AddEditSujetViewState extends State<AddEditSujetView> {
 
                     const SizedBox(height: 20),
 
-                    _buildLabel('Année académique *', textColor),
+                    _buildLabel('AnnÃ©e acadÃ©mique *', textColor),
                     const SizedBox(height: 8),
                     TextFormField(
                       controller: _anneeController,
@@ -403,7 +439,7 @@ class _AddEditSujetViewState extends State<AddEditSujetView> {
                       ),
                       validator: (value) {
                         if (value == null || value.trim().isEmpty) {
-                          return 'L’année académique est obligatoire.';
+                          return 'Lâ€™annÃ©e acadÃ©mique est obligatoire.';
                         }
                         return null;
                       },
@@ -454,7 +490,7 @@ class _AddEditSujetViewState extends State<AddEditSujetView> {
 
                     const SizedBox(height: 20),
 
-                    _buildLabel('Corrigé (facultatif)', textColor),
+                    _buildLabel('CorrigÃ© (facultatif)', textColor),
                     const SizedBox(height: 8),
                     _buildPdfPicker(
                       fichier: _fichierCorrige,
@@ -645,7 +681,7 @@ class _AddEditSujetViewState extends State<AddEditSujetView> {
         color: _accentColor,
       ),
       label: Text(
-        estCorrige ? 'Ajouter le corrigé PDF' : 'Choisir le sujet PDF',
+        estCorrige ? 'Ajouter le corrigÃ© PDF' : 'Choisir le sujet PDF',
       ),
       style: OutlinedButton.styleFrom(
         foregroundColor: textColor,
@@ -663,6 +699,12 @@ class _AddEditSujetViewState extends State<AddEditSujetView> {
   @override
   void initState() {
     super.initState();
+
+    _titreController.text = widget.titre ?? '';
+    _descriptionController.text = widget.description ?? '';
+    _concoursController.text = widget.concours ?? '';
+    _anneeController.text = widget.anneeAcademique ?? '';
+
     _chargerMatieres();
   }
 
@@ -673,16 +715,23 @@ class _AddEditSujetViewState extends State<AddEditSujetView> {
       if (!mounted) return;
 
       setState(() {
-        _matieres = matieres;
-        _chargementMatieres = false;
-        _erreurMatieres = null;
-      });
+      _matieres = matieres;
+
+      final matiereExiste = matieres.any(
+        (matiere) => matiere.id == widget.matiereId,
+      );
+
+      _matiereSelectionnee = matiereExiste ? widget.matiereId : null;
+
+      _chargementMatieres = false;
+      _erreurMatieres = null;
+    });
     } catch (e) {
       if (!mounted) return;
 
       setState(() {
         _chargementMatieres = false;
-        _erreurMatieres = 'Impossible de charger les matières.';
+        _erreurMatieres = 'Impossible de charger les matiÃ¨res.';
       });
     }
   }

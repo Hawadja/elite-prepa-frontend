@@ -168,6 +168,8 @@ class SujetRepository {
   /// Modifie les informations textuelles d'un sujet existant.
   ///
   /// Le backend ne permet pas encore de remplacer les PDF.
+
+  /// Modifie un sujet et permet de remplacer ses fichiers PDF.
   Future<void> updateSujet({
     required String id,
     required String titre,
@@ -175,11 +177,11 @@ class SujetRepository {
     required String matiereId,
     required String concours,
     required String anneeAcademique,
+    PlatformFile? fichier,
+    PlatformFile? corrige,
   }) async {
     if (id.trim().isEmpty) {
-      throw ArgumentError(
-        'Identifiant du sujet manquant.',
-      );
+      throw ArgumentError('Identifiant du sujet manquant.');
     }
 
     final token = await _getToken();
@@ -188,26 +190,42 @@ class SujetRepository {
       '$baseUrl/api/sujets/${Uri.encodeComponent(id)}',
     );
 
-    final response = await http
-        .put(
-          uri,
-          headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer $token',
-          },
-          body: jsonEncode({
-            'titre': titre.trim(),
-            'description': description.trim(),
-            'matiere': matiereId,
-            'concours': concours.trim(),
-            'anneeAcademique': anneeAcademique.trim(),
-          }),
-        )
-        .timeout(const Duration(seconds: 15));
+    final request = http.MultipartRequest('PUT', uri);
+
+    request.headers['Accept'] = 'application/json';
+    request.headers['Authorization'] = 'Bearer $token';
+
+    request.fields.addAll({
+      'titre': titre.trim(),
+      'description': description.trim(),
+      'matiere': matiereId,
+      'concours': concours.trim(),
+      'anneeAcademique': anneeAcademique.trim(),
+    });
+
+    // Ajouter uniquement les fichiers qui ont été sélectionnés.
+    if (fichier != null) {
+      request.files.add(
+        await _platformFileToMultipart(fichier, 'fichier'),
+      );
+    }
+
+    if (corrige != null) {
+      request.files.add(
+        await _platformFileToMultipart(corrige, 'corrige'),
+      );
+    }
+
+    final streamedResponse = await request.send().timeout(
+      const Duration(seconds: 30),
+    );
+
+    final response = await http.Response.fromStream(streamedResponse);
 
     _checkResponse(response);
   }
+
+
 
   /// Supprime un sujet sur le backend.
   Future<void> deleteSujet(String id) async {

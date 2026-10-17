@@ -43,8 +43,12 @@ class _RessourcesDashboardViewState
       final matieres = await _matiereRepository.getMatieres();
 
       // 2. Récupérer les fiches de cours
-      final fichesCours =
+      // 2. Récupérer les fiches de cours
+      final resultatFiches =
           await _ficheCoursRepository.getFichesCours();
+
+      final nombreFichesCours =
+          resultatFiches['total'] as int;
 
       // 3. Récupérer les sujets et leurs corrigés
       final premierePage = await _sujetRepository.getSujetsPage(
@@ -74,7 +78,7 @@ class _RessourcesDashboardViewState
 
       setState(() {
         _nombreMatieres = matieres.length;
-        _nombreFichesCours = fichesCours.length;
+        _nombreFichesCours = nombreFichesCours;
         _nombreSujets = nombreSujets;
         _nombreCorriges = nombreCorriges;
       });
@@ -205,10 +209,15 @@ appBar: AppBar(
                     title: 'Fiches de cours',
                     value: _nombreFichesCours?.toString() ?? '...',
                     icon: Icons.description_outlined,
-                    onTap: () {
-                      context.push(AppRoutes.fichesCours);
+                    onTap: () async {
+                      await context.push(AppRoutes.fichesCours);
+
+                      if (!mounted) return;
+
+                      await _chargerStatistiques();
                     },
                   ),
+
 
                   _StatCard(
                     title: 'Sujets',
