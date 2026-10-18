@@ -1,0 +1,830 @@
+﻿import 'package:flutter/material.dart';
+
+import '../../../core/storage/token_storage.dart';
+import '../repositories/fiche_cours_repository.dart';
+import 'add_fiche_view.dart';
+import 'package:file_picker/file_picker.dart';
+import '../models/matiere.dart';
+import '../repositories/matiere_repository.dart';
+
+class AddEditFicheView extends StatefulWidget {
+  final String? id;
+  final String? titre;
+  final String? matiere;
+  final String? matiereId;
+  final String? description;
+  final String? nomFichier;
+
+  const AddEditFicheView({
+    super.key,
+    this.id,
+    this.titre,
+    this.matiere,
+    this.matiereId,
+    this.description,
+    this.nomFichier,
+  });
+
+  bool get isEditMode => id != null;
+
+  @override
+  State<AddEditFicheView> createState() => _AddEditFicheViewState();
+}
+
+class _AddEditFicheViewState extends State<AddEditFicheView> {
+  static const Color primaryColor = Color(0xFF1F3F6E);
+  static const Color accentColor = Color(0xFFF0A500);
+  static const Color lightBackground = Color(0xFFF5F5F5);
+
+  final FicheCoursRepository _ficheCoursRepository =
+    FicheCoursRepository();
+
+  final TokenStorage _tokenStorage = TokenStorage();
+
+  final _formKey = GlobalKey<FormState>();
+
+  late TextEditingController _titreController;
+  late TextEditingController _descriptionController;
+  late TextEditingController _concoursController;
+  late TextEditingController _anneeController;
+
+  String? _matiereSelectionnee;
+  PlatformFile? _selectedFile;
+
+  final MatiereRepository _matiereRepository =
+      MatiereRepository();
+
+  List<Matiere> _matieres = [];
+
+  bool _chargementMatieres = true;
+  String? _erreurMatieres;
+
+
+  String? _selectedFileName;
+
+  int _currentIndex = 1;
+  bool _isSubmitting = false;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _titreController = TextEditingController(
+      text: widget.titre ?? '',
+    );
+
+    _concoursController = TextEditingController();
+    _anneeController = TextEditingController();
+
+    _descriptionController = TextEditingController(
+      text: widget.description ?? '',
+    );
+
+    _selectedFileName = widget.nomFichier;
+    _chargerMatieres();
+  }
+
+  @override
+  void dispose() {
+    _titreController.dispose();
+    _descriptionController.dispose();
+    _concoursController.dispose();
+    _anneeController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _chargerMatieres() async {
+    try {
+      final matieres = await _matiereRepository.getMatieres();
+
+      if (!mounted) return;
+
+      setState(() {
+        _matieres = matieres;
+        _chargementMatieres = false;
+        _erreurMatieres = null;
+      });
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        _chargementMatieres = false;
+        _erreurMatieres = 'Impossible de charger les matieres.';
+      });
+    }
+  }
+
+  Future<void> _pickPDFFile() async {
+    final result = await Navigator.push<Map<String, dynamic>>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const AddFicheView(),
+      ),
+    );
+
+    if (result == null || !mounted) return;
+
+    final file = result['file'];
+
+    if (file is! PlatformFile) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Impossible de recuperer le fichier PDF.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      _selectedFile = file;
+      _selectedFileName = file.name;
+    });
+  }
+
+  void _removeSelectedFile() {
+    setState(() {
+      _selectedFile = null;
+      _selectedFileName = null;
+    });
+  }
+
+  Future<void> _submitForm() async {
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
+    if (_matiereSelectionnee == null ||
+        _matiereSelectionnee!.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Veuillez selectionner une matiere.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    if (!widget.isEditMode && _selectedFile == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Veuillez selectionner le PDF de la fiche.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    if (!widget.isEditMode &&
+        (_concoursController.text.trim().isEmpty ||
+            _anneeController.text.trim().isEmpty)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Veuillez renseigner le concours et l annee academique.',
+          ),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      _isSubmitting = true;
+    });
+
+    try {
+      final token = await _tokenStorage.getAccessToken();
+
+      if (token == null || token.trim().isEmpty) {
+        throw Exception(
+          'Session expire ou absente. Reconnecte-toi.',
+        );
+      }
+
+      if (widget.isEditMode) {
+        await _ficheCoursRepository.updateFicheCours(
+          widget.id!,
+          titre: _titreController.text.trim(),
+          description: _descriptionController.text.trim(),
+          token: token,
+        );
+      } else {
+        await _ficheCoursRepository.createFicheCours(
+          titre: _titreController.text.trim(),
+          description: _descriptionController.text.trim(),
+          matiereId: _matiereSelectionnee!,
+          concours: _concoursController.text.trim(),
+          anneeAcademique: _anneeController.text.trim(),
+          fichier: _selectedFile!,
+          token: token,
+        );
+      }
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            widget.isEditMode
+                ? 'Fiche de cours modifier avec succes.'
+                : 'Fiche de cours ajouter avec succes.',
+          ),
+          backgroundColor: Colors.green,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+
+      Navigator.pop(context, true);
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            e.toString().replaceFirst('Exception: ', ''),
+          ),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSubmitting = false;
+        });
+      }
+    }
+  }
+
+
+  void _onNavigationSelected(int index) {
+    if (index == _currentIndex) {
+      return;
+    }
+
+    setState(() {
+      _currentIndex = index;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    final isDark =
+        theme.brightness == Brightness.dark;
+
+    final backgroundColor = isDark
+        ? theme.colorScheme.surface
+        : lightBackground;
+
+    final cardColor = isDark
+        ? const Color(0xFF102542)
+        : Colors.white;
+
+    final textColor =
+        isDark ? Colors.white : Colors.black87;
+
+    final secondaryTextColor =
+        isDark ? Colors.white70 : Colors.black54;
+
+    final pageTitle = widget.isEditMode
+        ? 'Modifier la fiche'
+        : 'Ajouter une fiche';
+
+    final sectionTitle = widget.isEditMode
+        ? 'Modifier la fiche de cours'
+        : 'Nouvelle fiche de cours';
+
+    final sectionDescription = widget.isEditMode
+        ? 'Modifiez les informations de la fiche.'
+        : 'Renseignez les informations de la fiche.';
+
+    final buttonLabel = widget.isEditMode
+        ? 'Enregistrer les modifications'
+        : 'Ajouter la fiche';
+
+    return Scaffold(
+      backgroundColor: backgroundColor,
+
+      appBar: AppBar(
+        backgroundColor: primaryColor,
+        foregroundColor: Colors.white,
+        elevation: 0,
+        titleSpacing: 0,
+
+        leading: IconButton(
+          icon: const Icon(
+            Icons.arrow_back_ios_new,
+            size: 19,
+            color: accentColor,
+          ),
+          onPressed: () {
+            Navigator.pop(context);
+          },
+          tooltip: 'Retour',
+        ),
+
+        title: Column(
+          crossAxisAlignment:
+              CrossAxisAlignment.start,
+          children: [
+            Text(
+              pageTitle,
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const Text(
+              'Ressources Â· Elite-Prepa',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.normal,
+              ),
+            ),
+          ],
+        ),
+      ),
+
+      body: SafeArea(
+        bottom: false,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(
+            16,
+            16,
+            16,
+            24,
+          ),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment:
+                  CrossAxisAlignment.start,
+              children: [
+                Text(
+                  sectionTitle,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    color: isDark
+                        ? Colors.white
+                        : primaryColor,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+
+                const SizedBox(height: 4),
+
+                Text(
+                  sectionDescription,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: secondaryTextColor,
+                  ),
+                ),
+
+                const SizedBox(height: 18),
+
+                _buildFormField(
+                  label: 'Titre',
+                  hintText:
+                      'Ex. Limites et continuite',
+                  controller: _titreController,
+                  cardColor: cardColor,
+                  textColor: textColor,
+                  validator: (value) {
+                    if (value == null ||
+                        value.trim().isEmpty) {
+                      return 'Veuillez saisir un titre';
+                    }
+
+                    return null;
+                  },
+                ),
+
+                const SizedBox(height: 12),
+
+                Text(
+                  'Matiere *',
+                  style: TextStyle(
+                    color: textColor,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+
+                  const SizedBox(height: 8),
+
+                  if (_chargementMatieres)
+                    const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(12),
+                        child: CircularProgressIndicator(),
+                      ),
+                    )
+                  else if (_erreurMatieres != null)
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _erreurMatieres!,
+                          style: const TextStyle(color: Colors.red),
+                        ),
+                        TextButton.icon(
+                          onPressed: () {
+                            setState(() {
+                              _chargementMatieres = true;
+                              _erreurMatieres = null;
+                            });
+
+                            _chargerMatieres();
+                          },
+                          icon: const Icon(Icons.refresh),
+                          label: const Text('Ressayer'),
+                        ),
+                      ],
+                    )
+                  else if (_matieres.isEmpty)
+                    const Text(
+                      'Aucune matiere disponible.',
+                      style: TextStyle(color: Colors.orange),
+                    )
+                  else
+                    DropdownButtonFormField<String>(
+                      initialValue: _matiereSelectionnee,
+                      isExpanded: true,
+                      decoration: InputDecoration(
+                        hintText: 'Selectionner une matiere',
+                        prefixIcon: const Icon(Icons.school_outlined),
+                        filled: true,
+                        fillColor: cardColor,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      items: _matieres.map((matiere) {
+                        return DropdownMenuItem<String>(
+                          value: matiere.id,
+                          child: Text(matiere.nom),
+                        );
+                      }).toList(),
+                      onChanged: (value) {
+                        setState(() {
+                          _matiereSelectionnee = value;
+                        });
+                      },
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Veuillez selectionner une matiere.';
+                        }
+
+                        return null;
+                      },
+                    ),
+
+                  const SizedBox(height: 12),
+
+
+                _buildFormField(
+                  label: 'Description',
+                  hintText:
+                      'Objectifs, notions cle et prerequis...',
+                  controller:
+                      _descriptionController,
+                  cardColor: cardColor,
+                  textColor: textColor,
+                  maxLines: 4,
+                ),
+
+            const SizedBox(height: 12),
+
+            _buildFormField(
+              label: 'Concours',
+              hintText: 'Ex. : Concours ENS',
+              controller: _concoursController,
+              cardColor: cardColor,
+              textColor: textColor,
+              validator: (value) {
+                if (value == null || value.trim().isEmpty) {
+                  return 'Veuillez renseigner le concours.';
+                }
+                return null;
+              },
+            ),
+
+            const SizedBox(height: 12),
+
+            _buildFormField(
+              label: 'Annee academique',
+              hintText: 'Ex. : 2025-2026',
+              controller: _anneeController,
+              cardColor: cardColor,
+              textColor: textColor,
+              validator: (value) {
+                if (value == null || value.trim().isEmpty) {
+                  return 'Veuillez renseigner l annee academique.';
+                }
+                return null;
+              },
+            ),
+
+            const SizedBox(height: 12),
+
+            _buildPdfPicker(
+              cardColor: cardColor,
+              textColor: textColor,
+              secondaryTextColor: secondaryTextColor,
+            ),
+
+
+                const SizedBox(height: 24),
+
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: ElevatedButton.icon(
+                    onPressed: _isSubmitting
+                        ? null
+                        : _submitForm,
+                    icon: _isSubmitting
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child:
+                                CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : Icon(
+                            widget.isEditMode
+                                ? Icons.save_outlined
+                                : Icons.check,
+                            size: 19,
+                          ),
+                    label: Text(
+                      _isSubmitting
+                          ? 'Enregistrement...'
+                          : buttonLabel,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: primaryColor,
+                      foregroundColor: Colors.white,
+                      disabledBackgroundColor:
+                          primaryColor.withValues(
+                        alpha: 0.55,
+                      ),
+                      elevation: 0,
+                      shape:
+                          RoundedRectangleBorder(
+                        borderRadius:
+                            BorderRadius.circular(9),
+                      ),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 8),
+
+                Center(
+                  child: Text(
+                    'Format accepte : PDF Â· 20 Mo maximum',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: secondaryTextColor,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _currentIndex,
+        onDestinationSelected:
+            _onNavigationSelected,
+        backgroundColor: isDark
+            ? const Color(0xFF081B32)
+            : Colors.white,
+        indicatorColor:
+            accentColor.withValues(alpha: 0.18),
+        height: 68,
+        destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.home_outlined),
+            selectedIcon: Icon(Icons.home),
+            label: 'Accueil',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.menu_book_outlined),
+            selectedIcon: Icon(Icons.menu_book),
+            label: 'Revisions',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.school_outlined),
+            selectedIcon: Icon(Icons.school),
+            label: 'Concours',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.person_outline),
+            selectedIcon: Icon(Icons.person),
+            label: 'Profil',
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFormField({
+    required String label,
+    required String hintText,
+    required TextEditingController controller,
+    required Color cardColor,
+    required Color textColor,
+    int maxLines = 1,
+    String? Function(String?)? validator,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(
+        14,
+        11,
+        14,
+        5,
+      ),
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: Colors.black12,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment:
+            CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: textColor,
+            ),
+          ),
+
+          const SizedBox(height: 2),
+
+          TextFormField(
+            controller: controller,
+            maxLines: maxLines,
+            validator: validator,
+            style: TextStyle(
+              fontSize: 13,
+              color: textColor,
+            ),
+            decoration: InputDecoration(
+              hintText: hintText,
+              hintStyle: TextStyle(
+                fontSize: 13,
+                color: textColor.withValues(
+                  alpha: 0.45,
+                ),
+              ),
+              border: InputBorder.none,
+              isDense: true,
+              contentPadding:
+                  const EdgeInsets.symmetric(
+                vertical: 6,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPdfPicker({
+    required Color cardColor,
+    required Color textColor,
+    required Color secondaryTextColor,
+  }) {
+    final hasFile = _selectedFileName != null;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: hasFile
+              ? accentColor
+              : Colors.black12,
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: accentColor.withValues(
+                alpha: 0.13,
+              ),
+              borderRadius:
+                  BorderRadius.circular(8),
+            ),
+            child: Icon(
+              hasFile
+                  ? Icons.picture_as_pdf
+                  : Icons.upload_file_outlined,
+              color: accentColor,
+              size: 22,
+            ),
+          ),
+
+          const SizedBox(width: 11),
+
+          Expanded(
+            child: Column(
+              crossAxisAlignment:
+                  CrossAxisAlignment.start,
+              children: [
+                Text(
+                  hasFile
+                      ? 'Fichier selectionne'
+                      : 'Ajouter le fichier PDF',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: textColor,
+                  ),
+                ),
+
+                const SizedBox(height: 3),
+
+                Text(
+                  hasFile
+                      ? _selectedFileName!
+                      : 'Appuyez pour selectionner un PDF',
+                  maxLines: 2,
+                  overflow:
+                      TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: hasFile
+                        ? accentColor
+                        : secondaryTextColor,
+                    fontWeight: hasFile
+                        ? FontWeight.w600
+                        : FontWeight.normal,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          if (hasFile)
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  onPressed: _pickPDFFile,
+                  tooltip: 'Remplacer le PDF',
+                  icon: const Icon(
+                    Icons.refresh,
+                    color: primaryColor,
+                    size: 20,
+                  ),
+                ),
+                IconButton(
+                  onPressed: _removeSelectedFile,
+                  tooltip: 'Supprimer le PDF',
+                  icon: const Icon(
+                    Icons.delete_outline,
+                    color: Colors.red,
+                    size: 20,
+                  ),
+                ),
+              ],
+            )
+          else
+            IconButton(
+              onPressed: _pickPDFFile,
+              tooltip: 'Selectionner un PDF',
+              icon: Icon(
+                Icons.chevron_right,
+                color: secondaryTextColor,
+                size: 20,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}

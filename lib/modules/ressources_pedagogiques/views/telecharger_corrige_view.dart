@@ -1,0 +1,626 @@
+﻿import 'dart:io';
+
+import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:open_filex/open_filex.dart';
+import 'package:path_provider/path_provider.dart';
+import '../../../core/storage/token_storage.dart';
+
+class TelechargerCorrigeView extends StatefulWidget {
+  final String? id;
+  final String? titre;
+  final String? sousTitre;
+  final String? matiere;
+  final String? concours;
+  final String? annee;
+  final String? nomFichier;
+  final String? token;
+
+  /// Valeurs possibles : 'corrige', 'fiche', 'sujet'.
+  final String type;
+
+  const TelechargerCorrigeView({
+    super.key,
+    this.id,
+    this.titre,
+    this.sousTitre,
+    this.matiere,
+    this.concours,
+    this.annee,
+    this.nomFichier,
+    this.token,
+    this.type = 'corrige',
+  });
+
+  @override
+  State<TelechargerCorrigeView> createState() =>
+      _TelechargerCorrigeViewState();
+}
+
+class _TelechargerCorrigeViewState extends State<TelechargerCorrigeView> {
+  static const String _baseUrl = 'http://192.168.137.1:3000';
+  static const Color _primaryColor = Color(0xFF1F3F6E);
+  static const Color _accentColor = Color(0xFFF0A500);
+
+  bool _isDownloading = false;
+  bool _downloadFinished = false;
+  double _downloadProgress = 0;
+  String? _errorMessage;
+  String? _savedFilePath;
+
+  bool get isFiche => widget.type == 'fiche';
+  bool get isSujet => widget.type == 'sujet';
+
+  String get resourceName {
+    if (isFiche) return 'fiche de cours';
+    if (isSujet) return 'sujet de concours';
+    return 'corrigé';
+  }
+
+  String get resourceNameCapitalized {
+    if (isFiche) return 'Fiche de cours';
+    if (isSujet) return 'Sujet de concours';
+    return 'Corrigé';
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    // Aucun faux téléchargement au démarrage.
+    // L'utilisateur lance explicitement le téléchargement.
+  }
+
+  String _downloadUrl(String id) {
+    final encodedId = Uri.encodeComponent(id);
+
+    if (isSujet) {
+      return '$_baseUrl/api/sujets/$encodedId/download';
+    }
+
+    if (widget.type == 'corrige') {
+      return '$_baseUrl/api/sujets/$encodedId/corrige/download';
+    }
+
+    if (widget.type == 'fiche') {
+      return '$_baseUrl/api/fiches-cours/$encodedId/download';
+    }
+
+    throw UnsupportedError(
+      'Type de document non pris en charge : ${widget.type}',
+    );
+  }
+
+  String _safeFileName(String? candidate) {
+    var name = candidate?.trim() ?? '';
+
+    if (name.isEmpty) {
+      name = '${isSujet ? 'sujet' : 'corrige'}_${widget.id}.pdf';
+    }
+
+    // Évite les chemins transmis dans un nom de fichier.
+    name = name.split(RegExp(r'[/\\]')).last;
+
+    if (!name.toLowerCase().endsWith('.pdf')) {
+      name = '$name.pdf';
+    }
+
+    return name.replaceAll(RegExp(r'[<>:"|?*\x00-\x1F]'), '_');
+  }
+
+  Future<void> _downloadPdf() async {
+    if (_isDownloading) return;
+
+    final id = widget.id?.trim() ?? '';
+    final token = await _getAccessToken() ?? '';
+
+    if (id.isEmpty) {
+      _showError('Identifiant du document manquant.');
+      return;
+    }
+
+    if (token.isEmpty) {
+      _showError(
+        'Authentification requise : le module d’authentification doit '
+        'fournir un jeton JWT valide.',
+      );
+      return;
+    }
+
+    setState(() {
+      _isDownloading = true;
+      _downloadFinished = false;
+      _downloadProgress = 0;
+      _errorMessage = null;
+      _savedFilePath = null;
+    });
+
+    try {
+      final uri = Uri.parse(_downloadUrl(id));
+
+      final request = http.Request('GET', uri)
+        ..headers['Accept'] = 'application/pdf'
+        ..headers['Authorization'] = 'Bearer $token';
+
+      final client = http.Client();
+
+      try {
+        final response = await client
+            .send(request)
+            .timeout(const Duration(seconds: 60));
+
+        if (response.statusCode == 401) {
+          throw Exception(
+            'Session absente ou expirée. Reconnecte-toi.',
+          );
+        }
+
+        if (response.statusCode == 403) {
+          throw Exception(
+            'Accès refusé : tu ne disposes pas des autorisations nécessaires.',
+          );
+        }
+
+        if (response.statusCode == 404) {
+          throw Exception(
+            'Document introuvable. Vérifie qu’un PDF a été ajouté à ce sujet.',
+          );
+        }
+
+        if (response.statusCode != 200) {
+          throw Exception(
+            'Le serveur a répondu avec le code HTTP ${response.statusCode}.',
+          );
+        }
+
+        final directory = await getApplicationDocumentsDirectory();
+        final fileName = _safeFileName(widget.nomFichier);
+        final file = File(
+          '${directory.path}${Platform.pathSeparator}$fileName',
+        );
+
+        final sink = file.openWrite();
+        var receivedBytes = 0;
+        final totalBytes = response.contentLength ?? 0;
+
+        try {
+          await for (final chunk in response.stream) {
+            sink.add(chunk);
+            receivedBytes += chunk.length;
+
+            if (mounted && totalBytes > 0) {
+              setState(() {
+                _downloadProgress =
+                    (receivedBytes / totalBytes).clamp(0.0, 1.0);
+              });
+            }
+          }
+
+          await sink.flush();
+        } finally {
+          await sink.close();
+        }
+
+        if (receivedBytes == 0) {
+          if (await file.exists()) {
+            await file.delete();
+          }
+          throw Exception('Le fichier reçu est vide.');
+        }
+
+        // Vérifie que le contenu reçu est bien un PDF.
+        final bytes = await file.openRead(0, 5).fold<List<int>>(
+          <int>[],
+          (previous, chunk) => previous..addAll(chunk),
+        );
+
+        if (String.fromCharCodes(bytes) != '%PDF-') {
+          if (await file.exists()) {
+            await file.delete();
+          }
+
+          throw Exception(
+            'La réponse du serveur n’est pas un PDF valide.',
+          );
+        }
+
+        if (!mounted) return;
+
+        setState(() {
+          _downloadProgress = 1;
+          _downloadFinished = true;
+          _savedFilePath = file.path;
+        });
+
+        _showMessage('PDF enregistré avec succès.');
+      } finally {
+        client.close();
+      }
+    } on UnsupportedError catch (error) {
+      _showError(error.message.toString());
+    } on Exception catch (error) {
+      _showError(error.toString().replaceFirst('Exception: ', ''));
+    } catch (_) {
+      _showError(
+        'Une erreur inattendue est survenue pendant le téléchargement.',
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isDownloading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _openPdf() async {
+    final path = _savedFilePath;
+
+    if (path == null) return;
+
+    final result = await OpenFilex.open(path);
+
+    if (!mounted) return;
+
+    if (result.type != ResultType.done) {
+      _showError(
+        result.message.isEmpty
+            ? 'Impossible d’ouvrir le PDF.'
+            : result.message,
+      );
+    }
+  }
+
+  void _showError(String message) {
+    if (!mounted) return;
+
+    setState(() {
+      _errorMessage = message;
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red.shade700,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  void _showMessage(String message) {
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    final backgroundColor =
+        isDark ? const Color(0xFF081B32) : const Color(0xFFF5F5F5);
+    final cardColor = isDark ? const Color(0xFF102542) : Colors.white;
+
+    final displayedFileName =
+        widget.nomFichier?.trim().isNotEmpty == true
+            ? widget.nomFichier!
+            : 'document.pdf';
+
+    return Scaffold(
+      backgroundColor: backgroundColor,
+      appBar: AppBar(
+        backgroundColor: _primaryColor,
+        foregroundColor: Colors.white,
+        elevation: 0,
+        surfaceTintColor: Colors.transparent,
+        title: Text(
+          'Télécharger $resourceName',
+          style: const TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        leading: IconButton(
+          tooltip: 'Retour',
+          icon: const Icon(
+            Icons.arrow_back_ios_new,
+            size: 19,
+            color: _accentColor,
+          ),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                resourceNameCapitalized,
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: isDark ? Colors.white : _primaryColor,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                widget.titre ?? 'Ressource pédagogique',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: isDark ? Colors.white : Colors.black87,
+                ),
+              ),
+              const SizedBox(height: 20),
+              Card(
+                color: cardColor,
+                elevation: 2,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(18),
+                  child: Column(
+                    children: [
+                      _infoRow(
+                        context,
+                        Icons.menu_book_outlined,
+                        'Matière',
+                        widget.matiere ?? 'Non renseignée',
+                      ),
+                      if (!isFiche) ...[
+                        const SizedBox(height: 14),
+                        _infoRow(
+                          context,
+                          Icons.school_outlined,
+                          'Concours',
+                          widget.concours ?? 'Non renseigné',
+                        ),
+                        const SizedBox(height: 14),
+                        _infoRow(
+                          context,
+                          Icons.calendar_today_outlined,
+                          'Année',
+                          widget.annee ?? 'Non renseignée',
+                        ),
+                      ],
+                      const SizedBox(height: 14),
+                      _infoRow(
+                        context,
+                        Icons.picture_as_pdf_outlined,
+                        'Fichier',
+                        displayedFileName,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              Card(
+                color: cardColor,
+                elevation: 2,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(18),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            _downloadFinished
+                                ? Icons.check_circle
+                                : _errorMessage != null
+                                    ? Icons.error_outline
+                                    : Icons.download,
+                            color: _downloadFinished
+                                ? Colors.green
+                                : _errorMessage != null
+                                    ? Colors.red
+                                    : _primaryColor,
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              _downloadFinished
+                                  ? 'Téléchargement terminé'
+                                  : _isDownloading
+                                      ? 'Téléchargement en cours...'
+                                      : _errorMessage != null
+                                          ? 'Échec du téléchargement'
+                                          : 'Prêt à télécharger',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color:
+                                    isDark ? Colors.white : Colors.black87,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 18),
+                      LinearProgressIndicator(
+                        value: _isDownloading ? _downloadProgress : 0,
+                        minHeight: 8,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        _downloadFinished
+                            ? '100 %'
+                            : _isDownloading
+                                ? '${(_downloadProgress * 100).toInt()} %'
+                                : 'En attente',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: isDark ? Colors.white70 : Colors.black54,
+                        ),
+                      ),
+                      if (_errorMessage != null) ...[
+                        const SizedBox(height: 12),
+                        Text(
+                          _errorMessage!,
+                          style: const TextStyle(
+                            color: Colors.red,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              Card(
+                color: cardColor,
+                elevation: 2,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(18),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: _accentColor.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(
+                          Icons.picture_as_pdf,
+                          color: _accentColor,
+                          size: 32,
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              displayedFileName,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                color:
+                                    isDark ? Colors.white : Colors.black87,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              _savedFilePath ?? 'Document PDF',
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color:
+                                    isDark ? Colors.white60 : Colors.black54,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 30),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: _isDownloading
+                      ? null
+                      : _downloadFinished
+                          ? _openPdf
+                          : _downloadPdf,
+                  icon: Icon(
+                    _downloadFinished ? Icons.open_in_new : Icons.download,
+                  ),
+                  label: Text(
+                    _isDownloading
+                        ? 'Téléchargement...'
+                        : _downloadFinished
+                            ? 'Ouvrir le PDF'
+                            : 'Télécharger $resourceName',
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _primaryColor,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 15),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _infoRow(
+    BuildContext context,
+    IconData icon,
+    String label,
+    String value,
+  ) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(
+          icon,
+          size: 21,
+          color: _accentColor,
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: isDark ? Colors.white60 : Colors.black54,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                value,
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: isDark ? Colors.white : Colors.black87,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+  Future<String?> _getAccessToken() async {
+    final tokenFromArguments = widget.token?.trim();
+
+    if (tokenFromArguments != null && tokenFromArguments.isNotEmpty) {
+      return tokenFromArguments;
+    }
+
+    return TokenStorage().getAccessToken();
+  }
+}
